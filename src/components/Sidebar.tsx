@@ -15,7 +15,8 @@ import {
   X,
   ChevronRight,
   BarChart3,
-  CheckCircle
+  CheckCircle,
+  Sparkles
 } from 'lucide-react';
 
 interface User {
@@ -34,13 +35,13 @@ interface SidebarProps {
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: Settings },
+  { name: 'Recommendations', href: '/recommendations', icon: Sparkles },
   { name: 'Profile', href: '/dashboard/profile', icon: Users },
   { name: 'Items', href: '/dashboard/items', icon: Package },
   { name: 'Reviews', href: '/dashboard/reviews', icon: MessageSquare },
-  { name: 'AI Assistant', href: '/dashboard/ai', icon: Bot },
+  { name: 'AI Assistant', href: '/ai', icon: Bot },
   { name: 'Analytics', href: '/dashboard/analytics', icon: BarChart3, roles: ['ADMIN', 'MANAGER'] },
   { name: 'Manage Users', href: '/dashboard/users', icon: Users, roles: ['ADMIN', 'MANAGER'] },
-  { name: 'Approvals', href: '/dashboard/approvals', icon: CheckCircle, roles: ['ADMIN'] },
 ];
 
 export function Sidebar({ user, onLogout }: SidebarProps) {

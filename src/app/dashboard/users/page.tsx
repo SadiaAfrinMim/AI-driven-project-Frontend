@@ -25,6 +25,18 @@ export default function UsersPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
 
+  // Current user from cookie
+  const Cookies = require('js-cookie');
+  const currentUser = (() => {
+    try {
+      const u = Cookies.get('user');
+      return u ? JSON.parse(u) : null;
+    } catch {
+      return null;
+    }
+  })();
+  const isAdmin = currentUser?.role === 'ADMIN';
+
   const fetchUsers = async () => {
     try {
       const data = await fetchApi(`${api.users}/all-users`);
@@ -48,6 +60,10 @@ export default function UsersPage() {
     user.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // If current user is MANAGER, they should only view and not change roles
+  // Backend already filters managers to only receive USER accounts
+  
+
   const handleDeleteUser = async (userId: string, userName: string) => {
     if (!confirm(`Are you sure you want to delete user "${userName}"?`)) return;
 
@@ -63,13 +79,13 @@ export default function UsersPage() {
     }
   };
 
-  const handleRoleChange = async (userId: string, newRole: string, userName: string) => {
+  const handleRoleChange = async (userId: string, newRole: string, userName?: string) => {
     try {
       await fetchApi(`${api.users}/update-role`, {
         method: 'PATCH',
         body: JSON.stringify({ userId, role: newRole }),
       });
-      toast.success(`${userName}'s role changed to ${newRole}`);
+      toast.success(`${userName || 'User'}'s role changed to ${newRole}`);
       fetchUsers();
     } catch (error) {
       console.error('Failed to update role:', error);
@@ -139,21 +155,27 @@ export default function UsersPage() {
                       <p className="font-semibold text-lg">{user.name}</p>
                       <p className="text-sm text-muted-foreground truncate">{user.email}</p>
                     </div>
-                    <Select
-                      value={user.role}
-                      onValueChange={(newRole) => handleRoleChange(user.id, newRole, user.name)}
-                    >
-                      <SelectTrigger className="w-[110px] h-8">
-                        <SelectValue>
-                          <Badge className={getRoleBadgeColor(user.role)}>{user.role}</Badge>
-                        </SelectValue>
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="USER">USER</SelectItem>
-                        <SelectItem value="MANAGER">MANAGER</SelectItem>
-                        <SelectItem value="ADMIN">ADMIN</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    {isAdmin ? (
+                      <Select
+                        value={user.role}
+                        onValueChange={(newRole) => {
+                          if (newRole) handleRoleChange(user.id, newRole);
+                        }}
+                      >
+                        <SelectTrigger className="w-[110px] h-8">
+                          <SelectValue>
+                            <Badge className={getRoleBadgeColor(user.role)}>{user.role}</Badge>
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="USER">USER</SelectItem>
+                          <SelectItem value="MANAGER">MANAGER</SelectItem>
+                          <SelectItem value="ADMIN">ADMIN</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <Badge className={getRoleBadgeColor(user.role)}>{user.role}</Badge>
+                    )}
                   </div>
 
                   <div className="mt-4 pt-4 border-t text-xs text-muted-foreground">

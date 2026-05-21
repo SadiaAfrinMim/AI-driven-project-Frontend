@@ -137,7 +137,7 @@ export default function HomePage() {
                 Browse Products
               </Button>
             </Link>
-            <Link href="/dashboard/ai">
+            <Link href="/ai">
               <Button variant="outline" size="lg" className="text-lg px-8 py-3">
                 <Bot className="mr-2 h-5 w-5" />
                 Try AI Assistant
@@ -235,7 +235,7 @@ export default function HomePage() {
                     <p className="text-sm text-gray-600">Get AI-powered help</p>
                   </div>
                 </div>
-                <Link href="/dashboard/ai" className="w-full mt-4">
+                <Link href="/ai" className="w-full mt-4">
                   <Button className="w-full" variant="outline">Open AI Chat</Button>
                 </Link>
               </CardContent>

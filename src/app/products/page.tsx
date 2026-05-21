@@ -73,10 +73,27 @@ export default function ProductsPage() {
         limit: itemsPerPage.toString()
       });
 
-      // By default only fetch APPROVED items
-      params.append('includeAll', 'false');
-      const response = await fetchApi(`${api.items}?${params}`);
-      setProducts(response.data?.items || []);
+      // Use dedicated approved items endpoint
+      const response = await fetchApi(`${api.items}/approved?${params}`);
+      const rawItems = response?.data?.items || [];
+
+      const mappedItems = rawItems.map((it: any) => ({
+        id: it.id,
+        title: it.title ?? '',
+        description: it.description ?? '',
+        price: typeof it.price === 'number' ? it.price : Number(it.price) || 0,
+        quantity: typeof it.quantity === 'number' ? it.quantity : (it.quantity ? Number(it.quantity) : 0),
+        location: it.location ?? '',
+        category: it.category ?? '',
+        rating: typeof it.rating === 'number' ? it.rating : Number(it.rating) || 0,
+        reviewCount: typeof it.reviewCount === 'number' ? it.reviewCount : (Array.isArray(it.reviews) ? it.reviews.length : (it.reviewCount ? Number(it.reviewCount) : 0)),
+        images: Array.isArray(it.images) ? it.images : [],
+        tags: Array.isArray(it.tags) ? it.tags : [],
+        createdAt: it.createdAt ?? new Date().toISOString(),
+        isAIContent: !!it.isAIContent,
+      }));
+
+      setProducts(mappedItems);
     } catch (error) {
       console.error('Failed to fetch products:', error);
       setProducts([]);

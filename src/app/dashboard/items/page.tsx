@@ -10,6 +10,7 @@ import { Search, Star, Edit, Trash2, Plus, X, Wand2, AlertTriangle } from 'lucid
 
 import { fetchApi, api } from '@/lib/api';
 import { toast } from 'sonner';
+import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 
 type DashboardItem = {
   id: string;
@@ -24,6 +25,7 @@ type DashboardItem = {
   images: string[];
   rating?: number;
   isAIContent?: boolean;
+  ownerId?: string;
 };
 
 type ModalMode = 'add' | 'edit';
@@ -46,6 +48,9 @@ export default function DashboardItemsPage() {
   const isAdmin = currentUser?.role === 'ADMIN';
   const isManager = currentUser?.role === 'MANAGER';
   const isPrivileged = isAdmin || isManager;
+  const currentUserId = currentUser?.id;
+
+  // Admins see all items (including pending), others see only approved
 
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<ModalMode>('add');
@@ -79,8 +84,13 @@ export default function DashboardItemsPage() {
   const fetchItems = async () => {
     setLoading(true);
     try {
-      const data = await fetchApi(api.items);
-      const list = data?.data?.items;
+      const endpoint = isManager ? `${api.items}/my-items` : api.items;
+
+      // Admin sees only PENDING items (for approval), others see only APPROVED
+      const query = isAdmin ? '?status=PENDING' : '?status=APPROVED';
+      const data = await fetchApi(`${endpoint}${query}`);
+
+      const list = data?.data?.items || data?.items;
       setItems(Array.isArray(list) ? list : []);
     } catch (e) {
       console.error('Failed to fetch items:', e);
@@ -95,7 +105,7 @@ export default function DashboardItemsPage() {
     if (isAdmin) {
       fetchPendingItems();
     }
-  }, []);
+  }, [isManager]);
 
   const fetchPendingItems = async () => {
     setLoadingPending(true);
@@ -125,8 +135,20 @@ export default function DashboardItemsPage() {
       await fetchApi(api.rejectItem(id), { method: 'PATCH' });
       toast.success('Item rejected');
       fetchPendingItems();
+      fetchItems();
     } catch {
       toast.error('Failed to reject');
+    }
+  };
+
+  const handleDeleteItem = async (itemId: string) => {
+    try {
+      await fetchApi(`${api.items}/${itemId}`, { method: 'DELETE' });
+      toast.success('Item deleted successfully');
+      fetchItems();
+    } catch (error) {
+      console.error('Failed to delete item:', error);
+      toast.error('Failed to delete item');
     }
   };
 
@@ -325,11 +347,10 @@ export default function DashboardItemsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-start gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Items</h1>
-          <p className="text-gray-600 mt-2">Manage product listings and inventory</p>
-        </div>
+      <DashboardHeader
+        title="Items"
+        subtitle="Manage product listings and inventory"
+      />
 
         {isPrivileged && (
           <Button
@@ -352,34 +373,7 @@ export default function DashboardItemsPage() {
             Add Item
           </Button>
         )}
-        </div>
-
-      {/* Admin - Pending Approvals Section */}
-      {isAdmin && pendingItems.length > 0 && (
-        <Card className="border-orange-200 bg-orange-50/50 dark:bg-orange-950/20">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-orange-700 dark:text-orange-400">
-              <AlertTriangle className="w-5 h-5" /> Pending Approvals ({pendingItems.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {pendingItems.map((item: any) => (
-                <div key={item.id} className="flex items-center justify-between bg-white dark:bg-slate-900 p-4 rounded-xl border">
-                  <div>
-                    <p className="font-semibold">{item.title}</p>
-                    <p className="text-sm text-muted-foreground">By {item.owner?.name}</p>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button size="sm" onClick={() => handleApprove(item.id)} className="bg-green-600 hover:bg-green-700">Approve</Button>
-                    <Button size="sm" variant="destructive" onClick={() => handleReject(item.id)}>Reject</Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      {/* Admin sees only pending items in main list with Approve/Reject buttons */}
 
       {/* Search */}
       <Card className="bg-white/70 backdrop-blur">
@@ -475,84 +469,64 @@ export default function DashboardItemsPage() {
 
                   <p className="text-sm text-gray-500">{item.location}</p>
 
-                  <div className="flex space-x-2 pt-2">
-                     {isPrivileged ? (
-                       <>
-                         <Button
-                           variant="outline"
-                           size="sm"
-                           className="flex-1"
-                           onClick={() => {
-                             setModalMode('edit');
-                             setSelectedItem(item);
-                             setFormTitle(item.title || '');
-                             setFormDescription(item.description || '');
-                              setFormPrice(String(item.price ?? ''));
-                              setFormQuantity(String(item.quantity ?? ''));
-                             setFormLocation(item.location || '');
-                             setFormCategory(item.category || '');
-                             setFormTags((item.tags || []).join(', '));
-                             setFormIsAIContent(!!item.isAIContent);
-                             setFormImages([]);
-                             setError(null);
-                             setModalOpen(true);
-                           }}
-                         >
-                           <Edit className="w-4 h-4 mr-1" />
-                           Edit
-                         </Button>
-                         {isAdmin && (
-                           <Button
-                             variant="outline"
-                             size="sm"
-                             className="flex-1 text-red-600 hover:text-red-700"
-                      onClick={async () => {
-                        // Use formTitle as topic; category may be 'uncategorized'
-                        try {
-                          const payload = {
-                            topic: formTitle || 'product',
-                            category: formCategory || 'uncategorized',
-                            keywords: parseTagsArray(formTags),
-                            length: 'short' as const,
-                            tone: 'professional' as const,
-                          };
-
-                           const resp = await fetchApi(api.ai.generateItemContent, {
-                             method: 'POST',
-                             body: JSON.stringify({
-                               type: 'tags',
-                               topic: formTitle || formDescription || 'product',
-                               category: formCategory || 'general',
-                               keywords: [formCategory],
-                             }),
-                           });
-
-                          if (Array.isArray(resp?.tags) && resp.tags.length > 0) {
-                            const unique = Array.from(new Set((resp.tags as any[]).map((t: any) => String(t).trim().replace(/^#/, ''))));
-                            // Format tags with leading # for display
-                            const formatted = unique.slice(0,5).map((t: any) => String(t).startsWith('#') ? String(t) : `#${String(t)}`);
-                            setFormTags(formatted.join(', '));
-                            toast.success('Tags generated from AI');
-                            return;
-                          }
-
-                          // If no tags returned, fall back to local tag generation
-                          const fallback = generateLocalTags(formTitle || formDescription || 'product');
-                          setFormTags(fallback.join(', '));
-                          toast.success('Tags generated locally');
-                        } catch (err: any) {
-                          console.error('Generate tags error:', err);
-                          // Fallback: generate from title locally
-                          const fallback = generateLocalTags(formTitle || formDescription || 'product');
-                          setFormTags(fallback.join(', '));
-                          toast.success('Tags generated locally');
-                        }
-                      }}
-                           >
-                             <Trash2 className="w-4 h-4 mr-1" />
-                             Delete
+                   <div className="flex space-x-2 pt-2">
+                      {isPrivileged ? (
+                        <>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="flex-1"
+                            onClick={() => {
+                              setModalMode('edit');
+                              setSelectedItem(item);
+                              setFormTitle(item.title || '');
+                              setFormDescription(item.description || '');
+                               setFormPrice(String(item.price ?? ''));
+                               setFormQuantity(String(item.quantity ?? ''));
+                              setFormLocation(item.location || '');
+                              setFormCategory(item.category || '');
+                              setFormTags((item.tags || []).join(', '));
+                              setFormIsAIContent(!!item.isAIContent);
+                              setFormImages([]);
+                              setError(null);
+                              setModalOpen(true);
+                            }}
+                          >
+                            <Edit className="w-4 h-4 mr-1" />
+                             Edit
                            </Button>
-                         )}
+
+                           {item.ownerId === currentUserId && (
+                             <Button
+                               variant="destructive"
+                               size="sm"
+                               className="flex-1"
+                               onClick={() => handleDeleteItem(item.id)}
+                             >
+                               <Trash2 className="w-4 h-4 mr-1" />
+                               Delete
+                             </Button>
+                           )}
+
+                           {isAdmin && (
+                            <>
+                              <Button
+                                size="sm"
+                                onClick={() => handleApprove(item.id)}
+                                className="bg-green-600 hover:bg-green-700"
+                              >
+                                Approve
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => handleReject(item.id)}
+                              >
+                                Reject
+                              </Button>
+                            </>
+                          )}
+
                        </>
                      ) : (
                        <Button variant="outline" size="sm" onClick={() => alert('You do not have permission to edit or delete this item')}>

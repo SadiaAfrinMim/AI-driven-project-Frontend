@@ -4,83 +4,132 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
-  BarChart3,
-  TrendingUp,
-  Users,
   Package,
-  MessageSquare,
+  Star,
+  CheckCircle,
+  Clock,
+  XCircle,
+  TrendingUp,
   Bot,
-  Calendar,
-  Activity,
-  PieChart
+  BarChart3,
+  Award,
+  Target
 } from 'lucide-react';
 import { fetchApi, api } from '@/lib/api';
-import Cookies from 'js-cookie';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart as RechartsPie, Pie, Cell, Legend } from 'recharts';
+import { ResponsiveContainer, PieChart, Pie, Cell, Legend, Tooltip } from 'recharts';
 
-interface AnalyticsData {
-  totalUsers: number;
-  totalItems: number;
-  totalReviews: number;
-  aiInteractions: number;
-  userGrowth: number;
-  itemGrowth: number;
-  reviewGrowth: number;
-  aiGrowth: number;
+interface MyItem {
+  id: string;
+  title: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  category: string;
+  rating?: number;
+  reviewCount?: number;
+  isAIContent?: boolean;
+  createdAt: string;
 }
 
-export default function AnalyticsPage() {
-  const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
+interface ManagerAnalytics {
+  totalProducts: number;
+  approved: number;
+  pending: number;
+  rejected: number;
+  averageRating: number;
+  totalReviewsReceived: number;
+  aiGeneratedCount: number;
+  items: MyItem[];
+}
+
+export default function ManagerAnalyticsPage() {
+  const [analytics, setAnalytics] = useState<ManagerAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchAnalytics = async () => {
+    const fetchManagerAnalytics = async () => {
       try {
-        const [usersRes, itemsRes, reviewsRes, insightsRes] = await Promise.all([
-          fetchApi(`${api.users}/all-users`),
-          fetchApi(api.items),
-          fetchApi(api.reviews),
-          fetchApi(api.ai.insights),
-        ]);
+        // Fetch only the current manager's items
+        const itemsRes = await fetchApi(`${api.items}/my-items?limit=200`);
 
-        const totalUsers = Array.isArray(usersRes?.data) ? usersRes.data.length : (usersRes?.data?.length || 0);
-        const totalItems = itemsRes?.data?.items
-          ? itemsRes.data.items.length
-          : Array.isArray(itemsRes?.data)
-          ? itemsRes.data.length
-          : (itemsRes?.data?.meta?.total || 0);
-        const totalReviews = reviewsRes?.data?.reviews
-          ? reviewsRes.data.reviews.length
-          : Array.isArray(reviewsRes?.data)
-          ? reviewsRes.data.length
-          : (reviewsRes?.data?.meta?.total || 0);
-        const aiInteractions = Array.isArray(insightsRes?.data)
-          ? insightsRes.data.length
-          : Array.isArray(insightsRes?.data?.insights)
-          ? insightsRes.data.insights.length
+        const myItems: MyItem[] = itemsRes?.data?.items || itemsRes?.items || [];
+
+        const approved = myItems.filter(i => i.status === 'APPROVED').length;
+        const pending = myItems.filter(i => i.status === 'PENDING').length;
+        const rejected = myItems.filter(i => i.status === 'REJECTED').length;
+
+        const aiGeneratedCount = myItems.filter(i => i.isAIContent).length;
+
+        const itemsWithRating = myItems.filter(i => i.rating && i.rating > 0);
+        const averageRating = itemsWithRating.length > 0
+          ? itemsWithRating.reduce((sum, i) => sum + (i.rating || 0), 0) / itemsWithRating.length
           : 0;
 
-        const data = {
-          totalUsers,
-          totalItems,
-          totalReviews,
-          aiInteractions,
-          userGrowth: 0,
-          itemGrowth: 0,
-          reviewGrowth: 0,
-          aiGrowth: 0,
-        };
+        const totalReviewsReceived = myItems.reduce((sum, i) => sum + (i.reviewCount || 0), 0);
 
-        setAnalytics(data);
+        setAnalytics({
+          totalProducts: myItems.length,
+          approved,
+          pending,
+          rejected,
+          averageRating: Math.round(averageRating * 10) / 10,
+          totalReviewsReceived,
+          aiGeneratedCount,
+          items: myItems,
+        });
       } catch (error) {
-        console.error('Failed to fetch analytics:', error);
+        console.error('Failed to fetch manager analytics:', error);
+        setAnalytics({
+          totalProducts: 0,
+          approved: 0,
+          pending: 0,
+          rejected: 0,
+          averageRating: 0,
+          totalReviewsReceived: 0,
+          aiGeneratedCount: 0,
+          items: [],
+        });
       } finally {
         setLoading(false);
       }
     };
 
-    fetchAnalytics();
+    fetchManagerAnalytics();
   }, []);
+
+  // Category distribution
+  const categoryData = analytics?.items
+    ? Object.entries(
+        analytics.items.reduce((acc: Record<string, number>, item) => {
+          acc[item.category] = (acc[item.category] || 0) + 1;
+          return acc;
+        }, {})
+      )
+        .map(([name, value]) => ({ name, value }))
+        .sort((a, b) => b.value - a.value)
+        .slice(0, 6)
+    : [];
+
+  // Status pie data
+  const statusData = analytics
+    ? [
+        { name: 'Approved', value: analytics.approved, fill: '#10b981' },
+        { name: 'Pending', value: analytics.pending, fill: '#f59e0b' },
+        { name: 'Rejected', value: analytics.rejected, fill: '#ef4444' },
+      ].filter(d => d.value > 0)
+    : [];
+
+  // Top performing products (by rating + reviews)
+  const topProducts = analytics?.items
+    ? [...analytics.items]
+        .filter(i => i.status === 'APPROVED' && (i.rating || 0) > 0)
+        .sort((a, b) => {
+          const scoreA = (a.rating || 0) * 10 + (a.reviewCount || 0);
+          const scoreB = (b.rating || 0) * 10 + (b.reviewCount || 0);
+          return scoreB - scoreA;
+        })
+        .slice(0, 5)
+    : [];
+
+  const COLORS = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ec4899', '#6366f1'];
 
   if (loading) {
     return (
@@ -91,186 +140,267 @@ export default function AnalyticsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Analytics Dashboard</h1>
-        <p className="text-gray-600 mt-2">Platform performance metrics and insights</p>
-      </div>
-
-      {/* Key Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-            <Users className="h-4 w-4 text-blue-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{analytics?.totalUsers || 0}</div>
-            <div className="flex items-center text-xs text-green-600">
-              <TrendingUp className="h-3 w-3 mr-1" />+{analytics?.userGrowth}% this month
+    <div className="space-y-8">
+      {/* Beautiful Header */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 p-8 text-white shadow-2xl">
+        <div className="relative z-10">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm">
+              <BarChart3 className="h-8 w-8" />
             </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Products</CardTitle>
-            <Package className="h-4 w-4 text-green-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{analytics?.totalItems || 0}</div>
-            <div className="flex items-center text-xs text-green-600">
-              <TrendingUp className="h-3 w-3 mr-1" />+{analytics?.itemGrowth}% this month
+            <div>
+              <h1 className="text-4xl font-bold tracking-tight">Manager Analytics</h1>
+              <p className="text-blue-100 mt-1 text-lg">Track the performance of your product listings</p>
             </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Reviews</CardTitle>
-            <MessageSquare className="h-4 w-4 text-yellow-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{analytics?.totalReviews || 0}</div>
-            <div className="flex items-center text-xs text-green-600">
-              <TrendingUp className="h-3 w-3 mr-1" />+{analytics?.reviewGrowth}% this month
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">AI Interactions</CardTitle>
-            <Bot className="h-4 w-4 text-purple-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{analytics?.aiInteractions || 0}</div>
-            <div className="flex items-center text-xs text-green-600">
-              <TrendingUp className="h-3 w-3 mr-1" />+{analytics?.aiGrowth}% this month
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Unique & Beautiful Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        
-        {/* 1. Premium Growth Area Chart */}
-        <Card className="overflow-hidden border-0 shadow-xl">
-          <CardHeader className="bg-gradient-to-r from-blue-600/5 to-purple-600/5">
-            <CardTitle className="flex items-center gap-2 text-xl">
-              <TrendingUp className="h-6 w-6 text-blue-600" /> Platform Growth
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-6">
-            <ResponsiveContainer width="100%" height={320}>
-              <LineChart data={[
-                { month: 'Jan', users: 820, products: 1250 },
-                { month: 'Feb', users: 980, products: 1480 },
-                { month: 'Mar', users: 1150, products: 1720 },
-                { month: 'Apr', users: 1380, products: 2050 },
-                { month: 'May', users: analytics?.totalUsers || 1620, products: analytics?.totalItems || 2450 },
-              ]}>
-                <CartesianGrid strokeDasharray="2 2" stroke="#f1f5f9" />
-                <XAxis dataKey="month" stroke="#94a3b8" />
-                <YAxis stroke="#94a3b8" />
-                <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
-                <Line type="natural" dataKey="users" stroke="#3b82f6" strokeWidth={4} dot={{ fill: '#3b82f6', strokeWidth: 2, r: 5 }} />
-                <Line type="natural" dataKey="products" stroke="#10b981" strokeWidth={4} dot={{ fill: '#10b981', strokeWidth: 2, r: 5 }} />
-              </LineChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        {/* 2. Beautiful Donut - User Roles */}
-        <Card className="overflow-hidden border-0 shadow-xl">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-xl">
-              <PieChart className="h-6 w-6 text-purple-600" /> User Role Distribution
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={320}>
-              <RechartsPie>
-                <Pie 
-                  data={[
-                    { name: 'Users', value: Math.max(analytics?.totalUsers || 120, 80), fill: '#3b82f6' },
-                    { name: 'Managers', value: 12, fill: '#10b981' },
-                    { name: 'Admins', value: 5, fill: '#f59e0b' },
-                  ]} 
-                  cx="50%" cy="50%" innerRadius={75} outerRadius={125} dataKey="value"
-                >
-                  {[{name:'Users',fill:'#3b82f6'},{name:'Managers',fill:'#10b981'},{name:'Admins',fill:'#f59e0b'}].map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.fill} />
-                  ))}
-                </Pie>
-                <Tooltip />
-                <Legend verticalAlign="bottom" height={36} />
-              </RechartsPie>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* 3. Modern Horizontal Category Performance */}
-      <Card className="overflow-hidden border-0 shadow-xl">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-xl">
-            <BarChart3 className="h-6 w-6 text-emerald-600" /> Top Product Categories
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pt-4">
-          <div className="space-y-6">
-            {[
-              { name: 'Electronics', value: 38, color: '#3b82f6' },
-              { name: 'Fashion', value: 29, color: '#8b5cf6' },
-              { name: 'Home & Living', value: 18, color: '#10b981' },
-              { name: 'Sports', value: 10, color: '#f59e0b' },
-              { name: 'Beauty', value: 5, color: '#ec4899' },
-            ].map((cat, index) => (
-              <div key={index} className="flex items-center gap-4">
-                <div className="w-32 text-sm font-medium">{cat.name}</div>
-                <div className="flex-1 h-4 bg-gray-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full rounded-full transition-all duration-700" 
-                    style={{ width: `${cat.value}%`, backgroundColor: cat.color }}
-                  />
-                </div>
-                <div className="w-12 text-right text-sm font-semibold tabular-nums">{cat.value}%</div>
-              </div>
-            ))}
           </div>
+        </div>
+        <div className="absolute -right-10 -bottom-10 opacity-10">
+          <Target className="h-64 w-64" />
+        </div>
+      </div>
+
+      {/* Eye-Catching KPI Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <Card className="border-0 shadow-lg hover:shadow-xl transition-all bg-white">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-500">My Products</p>
+                <p className="text-4xl font-bold text-gray-900 mt-1">{analytics?.totalProducts || 0}</p>
+              </div>
+              <div className="p-3 bg-blue-100 rounded-2xl">
+                <Package className="h-8 w-8 text-blue-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-0 shadow-lg hover:shadow-xl transition-all bg-white">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-500">Approved</p>
+                <p className="text-4xl font-bold text-emerald-600 mt-1">{analytics?.approved || 0}</p>
+              </div>
+              <div className="p-3 bg-emerald-100 rounded-2xl">
+                <CheckCircle className="h-8 w-8 text-emerald-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-0 shadow-lg hover:shadow-xl transition-all bg-white">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-500">Pending Approval</p>
+                <p className="text-4xl font-bold text-amber-600 mt-1">{analytics?.pending || 0}</p>
+              </div>
+              <div className="p-3 bg-amber-100 rounded-2xl">
+                <Clock className="h-8 w-8 text-amber-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-0 shadow-lg hover:shadow-xl transition-all bg-white">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-500">Rejected</p>
+                <p className="text-4xl font-bold text-red-600 mt-1">{analytics?.rejected || 0}</p>
+              </div>
+              <div className="p-3 bg-red-100 rounded-2xl">
+                <XCircle className="h-8 w-8 text-red-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-0 shadow-lg hover:shadow-xl transition-all bg-white">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-500">Avg. Rating</p>
+                <p className="text-4xl font-bold text-yellow-600 mt-1 flex items-baseline">
+                  {analytics?.averageRating || 0}
+                  <span className="text-lg ml-1">/5</span>
+                </p>
+              </div>
+              <div className="p-3 bg-yellow-100 rounded-2xl">
+                <Star className="h-8 w-8 text-yellow-600 fill-yellow-500" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-0 shadow-lg hover:shadow-xl transition-all bg-white">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-500">Reviews Received</p>
+                <p className="text-4xl font-bold text-purple-600 mt-1">{analytics?.totalReviewsReceived || 0}</p>
+              </div>
+              <div className="p-3 bg-purple-100 rounded-2xl">
+                <Award className="h-8 w-8 text-purple-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Main Visual Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Status Breakdown - Donut Chart */}
+        <Card className="overflow-hidden border-0 shadow-xl">
+          <CardHeader className="bg-gradient-to-r from-emerald-50 to-blue-50 border-b">
+            <CardTitle className="flex items-center gap-2 text-xl">
+              <Target className="h-6 w-6 text-emerald-600" />
+              Approval Status Breakdown
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-8 pb-8">
+            {statusData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={280}>
+                <PieChart>
+                  <Pie
+                    data={statusData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={85}
+                    outerRadius={130}
+                    dataKey="value"
+                    label={({ name, value }) => `${name}: ${value}`}
+                  >
+                    {statusData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.fill} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                  <Legend verticalAlign="bottom" height={50} />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-64 flex items-center justify-center text-gray-500">
+                No products yet. Start posting items!
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* AI Content Usage */}
+        <Card className="overflow-hidden border-0 shadow-xl">
+          <CardHeader className="bg-gradient-to-r from-purple-50 to-pink-50 border-b">
+            <CardTitle className="flex items-center gap-2 text-xl">
+              <Bot className="h-6 w-6 text-purple-600" />
+              AI Content Generation
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-8">
+            <div className="flex flex-col items-center justify-center h-[260px]">
+              <div className="text-7xl font-bold text-purple-600">
+                {analytics?.aiGeneratedCount || 0}
+              </div>
+              <p className="text-lg text-gray-600 mt-2">Products created with AI</p>
+              <div className="mt-6 text-center">
+                <div className="inline-flex items-center gap-2 px-4 py-2 bg-purple-100 text-purple-700 rounded-full text-sm font-medium">
+                  <Bot className="h-4 w-4" />
+                  {analytics?.totalProducts ? Math.round(((analytics.aiGeneratedCount / analytics.totalProducts) * 100) || 0) : 0}% of your listings used AI
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Category Distribution */}
+      <Card className="overflow-hidden border-0 shadow-xl">
+        <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b">
+          <CardTitle className="flex items-center gap-2 text-xl">
+            <BarChart3 className="h-6 w-6 text-blue-600" />
+            Your Products by Category
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pt-6 pb-6">
+          {categoryData.length > 0 ? (
+            <div className="space-y-4">
+              {categoryData.map((cat, index) => {
+                const percentage = Math.round((cat.value / (analytics?.totalProducts || 1)) * 100);
+                return (
+                  <div key={index} className="flex items-center gap-4">
+                    <div className="w-40 text-sm font-semibold text-gray-700 truncate">{cat.name}</div>
+                    <div className="flex-1 h-5 bg-gray-100 rounded-full overflow-hidden shadow-inner">
+                      <div
+                        className="h-full rounded-full transition-all duration-700 flex items-center justify-end pr-2"
+                        style={{
+                          width: `${percentage}%`,
+                          background: `linear-gradient(to right, ${COLORS[index % COLORS.length]}, ${COLORS[(index + 2) % COLORS.length]})`
+                        }}
+                      >
+                        <span className="text-[10px] font-bold text-white drop-shadow">{percentage}%</span>
+                      </div>
+                    </div>
+                    <div className="w-16 text-right text-sm font-bold text-gray-700 tabular-nums">
+                      {cat.value} items
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-gray-500">No category data available yet.</div>
+          )}
         </CardContent>
       </Card>
 
-      {/* 4. Sleek AI Activity Bar Chart */}
+      {/* Top Performing Products */}
       <Card className="overflow-hidden border-0 shadow-xl">
-        <CardHeader>
+        <CardHeader className="bg-gradient-to-r from-yellow-50 to-orange-50 border-b">
           <CardTitle className="flex items-center gap-2 text-xl">
-            <Activity className="h-6 w-6 text-rose-600" /> AI Feature Activity (This Week)
+            <TrendingUp className="h-6 w-6 text-orange-600" />
+            Your Top Performing Products
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={[
-              { day: 'Mon', chat: 68, content: 41 },
-              { day: 'Tue', chat: 75, content: 52 },
-              { day: 'Wed', chat: 82, content: 47 },
-              { day: 'Thu', chat: 91, content: 63 },
-              { day: 'Fri', chat: 79, content: 55 },
-              { day: 'Sat', chat: 54, content: 38 },
-            ]}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-              <XAxis dataKey="day" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Bar dataKey="chat" fill="#f43f5e" radius={4} name="AI Chat" />
-              <Bar dataKey="content" fill="#8b5cf6" radius={4} name="Content Gen" />
-            </BarChart>
-          </ResponsiveContainer>
+        <CardContent className="pt-6">
+          {topProducts.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {topProducts.map((product, idx) => (
+                <div key={idx} className="group p-4 rounded-xl border hover:border-orange-300 transition-all bg-white shadow-sm hover:shadow-md">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-gray-900 line-clamp-2 group-hover:text-orange-600 transition-colors">
+                        {product.title}
+                      </p>
+                      <div className="flex items-center gap-2 mt-3">
+                        <div className="flex items-center text-yellow-500">
+                          <Star className="h-4 w-4 fill-current" />
+                          <span className="ml-1 font-bold text-gray-800">{product.rating?.toFixed(1)}</span>
+                        </div>
+                        <span className="text-xs text-gray-500">({product.reviewCount || 0} reviews)</span>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <Badge variant="secondary" className="text-xs">{product.category}</Badge>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-10">
+              <div className="text-gray-400 mb-2">
+                <Award className="h-12 w-12 mx-auto" />
+              </div>
+              <p className="text-gray-600">Your approved products with good ratings will appear here.</p>
+            </div>
+          )}
         </CardContent>
       </Card>
+
+      {/* Quick Tip Footer */}
+      <div className="text-center text-sm text-gray-500 bg-white/70 py-4 rounded-xl border">
+        Pro tip: Use the <span className="font-semibold text-purple-600">AI Assistant</span> to generate high-quality titles and descriptions to increase approval chances and ratings.
+      </div>
     </div>
   );
 }
