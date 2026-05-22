@@ -22,6 +22,7 @@ export const api = {
     login: `${API_BASE_URL}/auth/login`,
   },
   users: `${API_BASE_URL}/users`,
+  usersAll: `${API_BASE_URL}/users/all-users`,
   items: `${API_BASE_URL}/items`,
   reviews: `${API_BASE_URL}/reviews`,
   pendingItems: `${API_BASE_URL}/items/pending`,
@@ -61,7 +62,7 @@ export async function fetchApi(url: string, options: RequestInit = {}) {
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({}));
-    throw new Error(error.message || 'API request failed');
+    throw new Error(error.message || error.error || 'API request failed');
   }
 
   return response.json();

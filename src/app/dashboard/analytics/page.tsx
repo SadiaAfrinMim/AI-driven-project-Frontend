@@ -13,10 +13,24 @@ import {
   Bot,
   BarChart3,
   Award,
-  Target
+  Target,
+  Users
 } from 'lucide-react';
 import { fetchApi, api } from '@/lib/api';
-import { ResponsiveContainer, PieChart, Pie, Cell, Legend, Tooltip } from 'recharts';
+import Cookies from 'js-cookie';
+import {
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  Legend,
+  Tooltip,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid
+} from 'recharts';
 
 interface MyItem {
   id: string;
@@ -26,381 +40,331 @@ interface MyItem {
   rating?: number;
   reviewCount?: number;
   isAIContent?: boolean;
-  createdAt: string;
 }
 
-interface ManagerAnalytics {
+interface AnalyticsData {
+  totalUsers?: number;
   totalProducts: number;
   approved: number;
   pending: number;
   rejected: number;
-  averageRating: number;
-  totalReviewsReceived: number;
   aiGeneratedCount: number;
+  totalReviews?: number;
+  averageRating?: number;
   items: MyItem[];
 }
 
-export default function ManagerAnalyticsPage() {
-  const [analytics, setAnalytics] = useState<ManagerAnalytics | null>(null);
+export default function AnalyticsPage() {
+  const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  const userStr = Cookies.get('user');
 
   useEffect(() => {
-    const fetchManagerAnalytics = async () => {
+    let role = '';
+    try {
+      if (userStr) role = JSON.parse(userStr).role;
+    } catch {}
+
+    const isAdminUser = role === 'ADMIN';
+    setIsAdmin(isAdminUser);
+
+    const fetchData = async () => {
       try {
-        // Fetch only the current manager's items
-        const itemsRes = await fetchApi(`${api.items}/my-items?limit=200`);
+        let items: MyItem[] = [];
+        let totalUsers = 0;
 
-        const myItems: MyItem[] = itemsRes?.data?.items || itemsRes?.items || [];
+        if (isAdminUser) {
+          const [itemsRes, usersRes] = await Promise.all([
+            fetchApi(`${api.items}?includeAll=true&limit=500`),
+            fetchApi(api.usersAll),
+          ]);
+          items = itemsRes?.data?.items || itemsRes?.items || [];
+          totalUsers = Array.isArray(usersRes?.data) ? usersRes.data.length : 0;
+        } else {
+          const res = await fetchApi(`${api.items}/my-items?limit=500`);
+          items = res?.data?.items || res?.items || [];
+        }
 
-        const approved = myItems.filter(i => i.status === 'APPROVED').length;
-        const pending = myItems.filter(i => i.status === 'PENDING').length;
-        const rejected = myItems.filter(i => i.status === 'REJECTED').length;
 
-        const aiGeneratedCount = myItems.filter(i => i.isAIContent).length;
+        const approved = items.filter(i => i.status === 'APPROVED').length;
+        const pending = items.filter(i => i.status === 'PENDING').length;
+        const rejected = items.filter(i => i.status === 'REJECTED').length;
+        const aiCount = items.filter(i => !!i.isAIContent).length;
 
-        const itemsWithRating = myItems.filter(i => i.rating && i.rating > 0);
-        const averageRating = itemsWithRating.length > 0
-          ? itemsWithRating.reduce((sum, i) => sum + (i.rating || 0), 0) / itemsWithRating.length
+        const rated = items.filter(i => (i.rating || 0) > 0);
+        const avgRating = rated.length > 0
+          ? rated.reduce((sum, i) => sum + (i.rating || 0), 0) / rated.length
           : 0;
 
-        const totalReviewsReceived = myItems.reduce((sum, i) => sum + (i.reviewCount || 0), 0);
+        const totalReviews = items.reduce((sum, i) => sum + (i.reviewCount || 0), 0);
 
-        setAnalytics({
-          totalProducts: myItems.length,
+        setData({
+          totalUsers: isAdminUser ? totalUsers : undefined,
+          totalProducts: items.length,
           approved,
           pending,
           rejected,
-          averageRating: Math.round(averageRating * 10) / 10,
-          totalReviewsReceived,
-          aiGeneratedCount,
-          items: myItems,
+          aiGeneratedCount: aiCount,
+          totalReviews,
+          averageRating: Math.round(avgRating * 10) / 10,
+          items,
         });
-      } catch (error) {
-        console.error('Failed to fetch manager analytics:', error);
-        setAnalytics({
-          totalProducts: 0,
-          approved: 0,
-          pending: 0,
-          rejected: 0,
-          averageRating: 0,
-          totalReviewsReceived: 0,
-          aiGeneratedCount: 0,
-          items: [],
-        });
+      } catch (e) {
+        console.error('Analytics fetch error:', e);
+        setData(null);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchManagerAnalytics();
-  }, []);
-
-  // Category distribution
-  const categoryData = analytics?.items
-    ? Object.entries(
-        analytics.items.reduce((acc: Record<string, number>, item) => {
-          acc[item.category] = (acc[item.category] || 0) + 1;
-          return acc;
-        }, {})
-      )
-        .map(([name, value]) => ({ name, value }))
-        .sort((a, b) => b.value - a.value)
-        .slice(0, 6)
-    : [];
-
-  // Status pie data
-  const statusData = analytics
-    ? [
-        { name: 'Approved', value: analytics.approved, fill: '#10b981' },
-        { name: 'Pending', value: analytics.pending, fill: '#f59e0b' },
-        { name: 'Rejected', value: analytics.rejected, fill: '#ef4444' },
-      ].filter(d => d.value > 0)
-    : [];
-
-  // Top performing products (by rating + reviews)
-  const topProducts = analytics?.items
-    ? [...analytics.items]
-        .filter(i => i.status === 'APPROVED' && (i.rating || 0) > 0)
-        .sort((a, b) => {
-          const scoreA = (a.rating || 0) * 10 + (a.reviewCount || 0);
-          const scoreB = (b.rating || 0) * 10 + (b.reviewCount || 0);
-          return scoreB - scoreA;
-        })
-        .slice(0, 5)
-    : [];
-
-  const COLORS = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ec4899', '#6366f1'];
+    fetchData();
+  }, [userStr]);
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="flex items-center justify-center min-h-[60vh] bg-slate-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-sky-600 mx-auto mb-4"></div>
+          <p className="text-gray-500">Loading analytics...</p>
+        </div>
       </div>
     );
   }
 
+  if (!data) {
+    return (
+      <div className="p-10 text-center text-red-500 bg-white min-h-[60vh]">
+        Failed to load analytics data
+      </div>
+    );
+  }
+  const approvalRate = data.totalProducts > 0 
+    ? Math.round((data.approved / data.totalProducts) * 100) 
+    : 0;
+
+  const aiAdoption = data.totalProducts > 0 
+    ? Math.round((data.aiGeneratedCount / data.totalProducts) * 100) 
+    : 0;
+
+  // Status data for Pie
+  const statusData = [
+    { name: 'Approved', value: data.approved, fill: '#10b981' },
+    { name: 'Pending', value: data.pending, fill: '#f59e0b' },
+    { name: 'Rejected', value: data.rejected, fill: '#ef4444' },
+  ].filter(d => d.value > 0);
+
+  // Category data for Bar
+  const categoryData = Object.entries(
+    data.items.reduce((acc: Record<string, number>, item) => {
+      acc[item.category] = (acc[item.category] || 0) + 1;
+      return acc;
+    }, {})
+  )
+    .map(([name, value]) => ({ name, value }))
+    .sort((a, b) => b.value - a.value)
+    .slice(0, 8);
+
   return (
-    <div className="space-y-8">
-      {/* Beautiful Header */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 p-8 text-white shadow-2xl">
-        <div className="relative z-10">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm">
-              <BarChart3 className="h-8 w-8" />
-            </div>
+    <div className="min-h-screen bg-slate-50 pb-12">
+      {/* Modern Header */}
+      <div className="bg-white border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-6 py-8">
+          <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-4xl font-bold tracking-tight">Manager Analytics</h1>
-              <p className="text-blue-100 mt-1 text-lg">Track the performance of your product listings</p>
+              <h1 className="text-3xl font-bold tracking-tight text-gray-900">
+                {isAdmin ? "Platform Analytics" : "My Analytics"}
+              </h1>
+              <p className="text-gray-500 mt-1 text-lg">
+                {isAdmin 
+                  ? "Real-time overview of the entire platform" 
+                  : "Performance of your product listings"}
+              </p>
             </div>
+            <Badge 
+              className={`px-4 py-1 text-sm font-medium ${isAdmin 
+                ? 'bg-red-100 text-red-700 border-red-200' 
+                : 'bg-sky-100 text-sky-700 border-sky-200'}`}
+            >
+              {isAdmin ? 'ADMIN' : 'MANAGER'}
+            </Badge>
           </div>
         </div>
-        <div className="absolute -right-10 -bottom-10 opacity-10">
-          <Target className="h-64 w-64" />
+      </div>
+
+      <div className="max-w-7xl mx-auto px-6 pt-8 space-y-8">
+
+        {/* KPI Cards - Modern Style */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+          {isAdmin && data.totalUsers !== undefined && (
+            <Card className="border border-gray-200 shadow-sm hover:shadow-md transition-all bg-white">
+              <CardContent className="p-5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest">Total Users</p>
+                    <p className="text-4xl font-bold text-gray-900 mt-1">{data.totalUsers}</p>
+                  </div>
+                  <div className="p-3 bg-blue-50 rounded-2xl">
+                    <Users className="h-7 w-7 text-blue-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          <Card className="border border-gray-200 shadow-sm hover:shadow-md transition-all bg-white">
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest">Total Products</p>
+                  <p className="text-4xl font-bold text-gray-900 mt-1">{data.totalProducts}</p>
+                </div>
+                <div className="p-3 bg-emerald-50 rounded-2xl">
+                  <Package className="h-7 w-7 text-emerald-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border border-gray-200 shadow-sm hover:shadow-md transition-all bg-white">
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest">Pending</p>
+                  <p className="text-4xl font-bold text-amber-600 mt-1">{data.pending}</p>
+                </div>
+                <div className="p-3 bg-amber-50 rounded-2xl">
+                  <Clock className="h-7 w-7 text-amber-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border border-gray-200 shadow-sm hover:shadow-md transition-all bg-white">
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest">Approved</p>
+                  <p className="text-4xl font-bold text-emerald-600 mt-1">{data.approved}</p>
+                </div>
+                <div className="p-3 bg-emerald-50 rounded-2xl">
+                  <CheckCircle className="h-7 w-7 text-emerald-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border border-gray-200 shadow-sm hover:shadow-md transition-all bg-white">
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest">AI Generated</p>
+                  <p className="text-4xl font-bold text-violet-600 mt-1">{data.aiGeneratedCount}</p>
+                </div>
+                <div className="p-3 bg-violet-50 rounded-2xl">
+                  <Bot className="h-7 w-7 text-violet-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border border-gray-200 shadow-sm hover:shadow-md transition-all bg-white">
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest">Approval Rate</p>
+                  <p className="text-4xl font-bold text-sky-600 mt-1">{approvalRate}%</p>
+                </div>
+                <div className="p-3 bg-sky-50 rounded-2xl">
+                  <TrendingUp className="h-7 w-7 text-sky-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
-      </div>
 
-      {/* Eye-Catching KPI Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        <Card className="border-0 shadow-lg hover:shadow-xl transition-all bg-white">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-500">My Products</p>
-                <p className="text-4xl font-bold text-gray-900 mt-1">{analytics?.totalProducts || 0}</p>
-              </div>
-              <div className="p-3 bg-blue-100 rounded-2xl">
-                <Package className="h-8 w-8 text-blue-600" />
-              </div>
+        {/* Charts Section - Modern & Clean */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Status Pie Chart */}
+          <Card className="border border-gray-200 shadow-sm bg-white">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg font-semibold flex items-center gap-2 text-gray-800">
+                <Target className="h-5 w-5 text-gray-600" />
+                Approval Status
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-2">
+              {statusData.length > 0 ? (
+                <ResponsiveContainer width="100%" height={280}>
+                  <PieChart>
+                    <Pie
+                      data={statusData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={70}
+                      outerRadius={110}
+                      dataKey="value"
+                    >
+                      {statusData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.fill} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                    <Legend verticalAlign="bottom" height={40} />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-[280px] flex items-center justify-center text-gray-400">No data available</div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Category Bar Chart */}
+          <Card className="border border-gray-200 shadow-sm bg-white">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg font-semibold flex items-center gap-2 text-gray-800">
+                <BarChart3 className="h-5 w-5 text-gray-600" />
+                Top Categories
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-2">
+              {categoryData.length > 0 ? (
+                <ResponsiveContainer width="100%" height={280}>
+                  <BarChart data={categoryData} layout="vertical">
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis type="number" />
+                    <YAxis dataKey="name" type="category" width={90} tick={{ fontSize: 12 }} />
+                    <Tooltip />
+                    <Bar dataKey="value" fill="#0ea5e9" radius={[0, 4, 4, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-[280px] flex items-center justify-center text-gray-400">No category data</div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* AI Adoption Highlight */}
+        <Card className="border border-gray-200 shadow-sm bg-white">
+          <CardContent className="p-6 flex flex-col md:flex-row items-center justify-between gap-6">
+            <div>
+              <p className="text-sm font-semibold text-gray-500 uppercase tracking-widest">AI Adoption</p>
+              <p className="text-5xl font-bold text-violet-600 mt-2">{aiAdoption}%</p>
+              <p className="text-gray-600 mt-1">
+                {data.aiGeneratedCount} of {data.totalProducts} listings created using AI
+              </p>
+            </div>
+            <div className="p-5 bg-violet-50 rounded-2xl">
+              <Bot className="h-14 w-14 text-violet-500" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-lg hover:shadow-xl transition-all bg-white">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-500">Approved</p>
-                <p className="text-4xl font-bold text-emerald-600 mt-1">{analytics?.approved || 0}</p>
-              </div>
-              <div className="p-3 bg-emerald-100 rounded-2xl">
-                <CheckCircle className="h-8 w-8 text-emerald-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-0 shadow-lg hover:shadow-xl transition-all bg-white">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-500">Pending Approval</p>
-                <p className="text-4xl font-bold text-amber-600 mt-1">{analytics?.pending || 0}</p>
-              </div>
-              <div className="p-3 bg-amber-100 rounded-2xl">
-                <Clock className="h-8 w-8 text-amber-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-0 shadow-lg hover:shadow-xl transition-all bg-white">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-500">Rejected</p>
-                <p className="text-4xl font-bold text-red-600 mt-1">{analytics?.rejected || 0}</p>
-              </div>
-              <div className="p-3 bg-red-100 rounded-2xl">
-                <XCircle className="h-8 w-8 text-red-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-0 shadow-lg hover:shadow-xl transition-all bg-white">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-500">Avg. Rating</p>
-                <p className="text-4xl font-bold text-yellow-600 mt-1 flex items-baseline">
-                  {analytics?.averageRating || 0}
-                  <span className="text-lg ml-1">/5</span>
-                </p>
-              </div>
-              <div className="p-3 bg-yellow-100 rounded-2xl">
-                <Star className="h-8 w-8 text-yellow-600 fill-yellow-500" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-0 shadow-lg hover:shadow-xl transition-all bg-white">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-500">Reviews Received</p>
-                <p className="text-4xl font-bold text-purple-600 mt-1">{analytics?.totalReviewsReceived || 0}</p>
-              </div>
-              <div className="p-3 bg-purple-100 rounded-2xl">
-                <Award className="h-8 w-8 text-purple-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Main Visual Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Status Breakdown - Donut Chart */}
-        <Card className="overflow-hidden border-0 shadow-xl">
-          <CardHeader className="bg-gradient-to-r from-emerald-50 to-blue-50 border-b">
-            <CardTitle className="flex items-center gap-2 text-xl">
-              <Target className="h-6 w-6 text-emerald-600" />
-              Approval Status Breakdown
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-8 pb-8">
-            {statusData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={280}>
-                <PieChart>
-                  <Pie
-                    data={statusData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={85}
-                    outerRadius={130}
-                    dataKey="value"
-                    label={({ name, value }) => `${name}: ${value}`}
-                  >
-                    {statusData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.fill} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend verticalAlign="bottom" height={50} />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-64 flex items-center justify-center text-gray-500">
-                No products yet. Start posting items!
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* AI Content Usage */}
-        <Card className="overflow-hidden border-0 shadow-xl">
-          <CardHeader className="bg-gradient-to-r from-purple-50 to-pink-50 border-b">
-            <CardTitle className="flex items-center gap-2 text-xl">
-              <Bot className="h-6 w-6 text-purple-600" />
-              AI Content Generation
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-8">
-            <div className="flex flex-col items-center justify-center h-[260px]">
-              <div className="text-7xl font-bold text-purple-600">
-                {analytics?.aiGeneratedCount || 0}
-              </div>
-              <p className="text-lg text-gray-600 mt-2">Products created with AI</p>
-              <div className="mt-6 text-center">
-                <div className="inline-flex items-center gap-2 px-4 py-2 bg-purple-100 text-purple-700 rounded-full text-sm font-medium">
-                  <Bot className="h-4 w-4" />
-                  {analytics?.totalProducts ? Math.round(((analytics.aiGeneratedCount / analytics.totalProducts) * 100) || 0) : 0}% of your listings used AI
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Category Distribution */}
-      <Card className="overflow-hidden border-0 shadow-xl">
-        <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b">
-          <CardTitle className="flex items-center gap-2 text-xl">
-            <BarChart3 className="h-6 w-6 text-blue-600" />
-            Your Products by Category
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pt-6 pb-6">
-          {categoryData.length > 0 ? (
-            <div className="space-y-4">
-              {categoryData.map((cat, index) => {
-                const percentage = Math.round((cat.value / (analytics?.totalProducts || 1)) * 100);
-                return (
-                  <div key={index} className="flex items-center gap-4">
-                    <div className="w-40 text-sm font-semibold text-gray-700 truncate">{cat.name}</div>
-                    <div className="flex-1 h-5 bg-gray-100 rounded-full overflow-hidden shadow-inner">
-                      <div
-                        className="h-full rounded-full transition-all duration-700 flex items-center justify-end pr-2"
-                        style={{
-                          width: `${percentage}%`,
-                          background: `linear-gradient(to right, ${COLORS[index % COLORS.length]}, ${COLORS[(index + 2) % COLORS.length]})`
-                        }}
-                      >
-                        <span className="text-[10px] font-bold text-white drop-shadow">{percentage}%</span>
-                      </div>
-                    </div>
-                    <div className="w-16 text-right text-sm font-bold text-gray-700 tabular-nums">
-                      {cat.value} items
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="text-center py-8 text-gray-500">No category data available yet.</div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Top Performing Products */}
-      <Card className="overflow-hidden border-0 shadow-xl">
-        <CardHeader className="bg-gradient-to-r from-yellow-50 to-orange-50 border-b">
-          <CardTitle className="flex items-center gap-2 text-xl">
-            <TrendingUp className="h-6 w-6 text-orange-600" />
-            Your Top Performing Products
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pt-6">
-          {topProducts.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {topProducts.map((product, idx) => (
-                <div key={idx} className="group p-4 rounded-xl border hover:border-orange-300 transition-all bg-white shadow-sm hover:shadow-md">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-gray-900 line-clamp-2 group-hover:text-orange-600 transition-colors">
-                        {product.title}
-                      </p>
-                      <div className="flex items-center gap-2 mt-3">
-                        <div className="flex items-center text-yellow-500">
-                          <Star className="h-4 w-4 fill-current" />
-                          <span className="ml-1 font-bold text-gray-800">{product.rating?.toFixed(1)}</span>
-                        </div>
-                        <span className="text-xs text-gray-500">({product.reviewCount || 0} reviews)</span>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <Badge variant="secondary" className="text-xs">{product.category}</Badge>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-10">
-              <div className="text-gray-400 mb-2">
-                <Award className="h-12 w-12 mx-auto" />
-              </div>
-              <p className="text-gray-600">Your approved products with good ratings will appear here.</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Quick Tip Footer */}
-      <div className="text-center text-sm text-gray-500 bg-white/70 py-4 rounded-xl border">
-        Pro tip: Use the <span className="font-semibold text-purple-600">AI Assistant</span> to generate high-quality titles and descriptions to increase approval chances and ratings.
       </div>
     </div>
   );
 }
+
+

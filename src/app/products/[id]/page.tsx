@@ -71,6 +71,7 @@ export default function ProductDetailsPage() {
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(0);
+  const [isEditingReview, setIsEditingReview] = useState(false);
 
 
   // get current user id from cookies
@@ -93,13 +94,16 @@ export default function ProductDetailsPage() {
       const productResponse = await fetchApi(`${api.items}/${productId}`);
       setProduct(productResponse.data);
 
-      // Fetch reviews for this product
+      // Fetch reviews STRICTLY for this specific product only
       const reviewsResponse = await fetchApi(`${api.reviews}?itemId=${productId}`);
       const allReviews = reviewsResponse.data?.reviews || [];
 
+      // Extra safety filter: only keep reviews that belong to this exact product
+      const productReviews = allReviews.filter((r: any) => r.itemId === productId || r.item?.id === productId);
+
       // Separate current user's review
-      const myReview = allReviews.find((r: Review) => r.userId === currentUserId) || null;
-      const otherReviews = allReviews.filter((r: Review) => r.userId !== currentUserId);
+      const myReview = productReviews.find((r: Review) => r.userId === currentUserId) || null;
+      const otherReviews = productReviews.filter((r: Review) => r.userId !== currentUserId);
 
       setUserReview(myReview);
       setReviews(otherReviews);
@@ -165,7 +169,7 @@ export default function ProductDetailsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-slate-50">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Breadcrumb */}
         <nav className="flex items-center space-x-2 text-sm text-muted-foreground mb-6">
@@ -173,13 +177,14 @@ export default function ProductDetailsPage() {
           <span>/</span>
           <Link href="/products" className="hover:text-foreground">Products</Link>
           <span>/</span>
-          <span className="text-foreground">{product.title}</span>
+          <span className="text-foreground font-medium">{product.title}</span>
         </nav>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
-          {/* Product Images */}
-          <div className="space-y-4">
-            <div className="aspect-square bg-muted rounded-lg overflow-hidden">
+        {/* Main Content */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-12">
+          {/* Product Images - 7/12 on desktop */}
+          <div className="lg:col-span-7 space-y-4">
+            <div className="aspect-[4/3] bg-white rounded-2xl overflow-hidden border border-slate-200 shadow-sm">
               {product.images?.[selectedImage] ? (
                 <img
                   src={product.images[selectedImage]}
@@ -187,8 +192,8 @@ export default function ProductDetailsPage() {
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <div className="w-full h-full flex items-center justify-center">
-                  <Package className="h-16 w-16 text-muted-foreground" />
+                <div className="w-full h-full flex items-center justify-center bg-slate-100">
+                  <Package className="h-16 w-16 text-slate-400" />
                 </div>
               )}
             </div>
@@ -200,9 +205,11 @@ export default function ProductDetailsPage() {
                   <button
                     key={index}
                     onClick={() => setSelectedImage(index)}
-                    className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 ${
-                      selectedImage === index ? 'border-primary' : 'border-muted'
-                    }`}
+                      className={`flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden border-2 transition-all ${
+                        selectedImage === index 
+                          ? 'border-sky-500 ring-2 ring-sky-200' 
+                          : 'border-slate-200 hover:border-sky-300'
+                      }`}
                   >
                     <img
                       src={image}
@@ -215,17 +222,17 @@ export default function ProductDetailsPage() {
             )}
           </div>
 
-          {/* Product Info */}
-          <div className="space-y-6">
+          {/* Product Info - 5/12 on desktop, sticky */}
+          <div className="lg:col-span-5 space-y-6 lg:sticky lg:top-8 self-start">
             <div>
               <div className="flex items-center gap-2 mb-2">
                 <Badge variant="outline">{product.category}</Badge>
                 {product.isAIContent && (
-                  <Badge className="bg-blue-500 text-white">AI Generated</Badge>
+                  <Badge className="bg-sky-100 text-sky-700 border-sky-200">AI Generated</Badge>
                 )}
               </div>
 
-              <h1 className="text-3xl font-bold text-foreground mb-4">{product.title}</h1>
+              <h1 className="text-4xl font-bold text-slate-900 mb-3 tracking-tight">{product.title}</h1>
 
               <div className="flex items-center gap-4 mb-4">
                 <div className="flex items-center">
@@ -240,74 +247,79 @@ export default function ProductDetailsPage() {
                 </div>
               </div>
 
-              <div className="text-4xl font-bold text-primary mb-2">
-                ${product.price.toFixed(2)}
+              <div className="text-5xl font-bold text-sky-600 tracking-tighter mb-2">
+                ৳{Number(product.price).toLocaleString()}
               </div>
               {product.quantity !== undefined && (
-                <div className="text-sm text-muted-foreground mb-6">
-                  In stock: <span className="font-medium text-foreground">{product.quantity}</span>
+                <div className="mb-6">
+                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold
+                    ${product.quantity > 10 ? 'bg-sky-100 text-sky-700' : 
+                      product.quantity > 0 ? 'bg-amber-100 text-amber-700' : 
+                      'bg-red-100 text-red-700'}`}>
+                    {product.quantity > 0 ? `${product.quantity} in stock` : 'Out of stock'}
+                  </span>
                 </div>
               )}
 
-              <div className="flex gap-3">
-                <Button size="lg" className="flex-1">
+              <div className="flex gap-3 pt-2">
+                <Button size="lg" className="flex-1 bg-sky-600 hover:bg-sky-700 text-base font-semibold">
                   Contact Seller
                 </Button>
 
-                <Button variant="outline" size="lg">
+                <Button variant="outline" size="lg" className="border-sky-200 hover:bg-sky-50">
                   <Share className="h-5 w-5" />
                 </Button>
               </div>
             </div>
 
             {/* Seller Info */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center">
-                  <User className="h-5 w-5 mr-2" />
-                  Seller Information
+            <Card className="border-sky-200 shadow-sm">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center text-sky-700">
+                  <User className="h-4 w-4 mr-2" />
+                  Seller
                 </CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="pt-0 pb-4">
                 <div className="flex items-center gap-3">
-                  <Avatar>
+                  <Avatar className="h-9 w-9">
                     <AvatarImage src={product.owner?.profileImage} />
                     <AvatarFallback>
                       {product.owner?.name?.charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                   <div>
-                    <p className="font-medium">{product.owner?.name}</p>
-                    <p className="text-sm text-muted-foreground">Member since {new Date(product.createdAt).getFullYear()}</p>
+                    <p className="font-semibold text-sm">{product.owner?.name}</p>
+                    <p className="text-[11px] text-muted-foreground">Member since {new Date(product.createdAt).getFullYear()}</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
             {/* Product Details */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Product Details</CardTitle>
+            <Card className="border-sky-200 shadow-sm">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base text-sky-700">Details</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="space-y-2 pt-0 pb-4 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Category</span>
-                  <span>{product.category}</span>
+                  <span className="font-medium">{product.category}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Location</span>
-                  <span>{product.location}</span>
+                  <span className="font-medium">{product.location}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Listed</span>
-                  <span>{new Date(product.createdAt).toLocaleDateString()}</span>
+                  <span className="font-medium">{new Date(product.createdAt).toLocaleDateString()}</span>
                 </div>
                 {product.tags && product.tags.length > 0 && (
-                  <div className="flex justify-between">
+                  <div className="flex justify-between items-start">
                     <span className="text-muted-foreground">Tags</span>
-                    <div className="flex gap-1">
-                      {product.tags.slice(0, 3).map((tag) => (
-                        <Badge key={tag} variant="secondary" className="text-xs">
+                    <div className="flex flex-wrap gap-1 justify-end">
+                      {product.tags.slice(0, 4).map((tag) => (
+                        <Badge key={tag} variant="secondary" className="text-[10px] px-1.5 py-0 h-5">
                           {tag}
                         </Badge>
                       ))}
@@ -319,74 +331,76 @@ export default function ProductDetailsPage() {
           </div>
         </div>
 
-        {/* Product Description */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
-          <div className="lg:col-span-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Description</CardTitle>
+        {/* Product Description + Side Info */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-12">
+          {/* Description - bigger */}
+          <div className="lg:col-span-8">
+            <Card className="border-sky-200 shadow-sm h-full">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg text-sky-700">Description</CardTitle>
               </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground leading-relaxed">
+              <CardContent className="pt-0 pb-6">
+                <p className="text-muted-foreground leading-relaxed text-[15px]">
                   {product.description}
                 </p>
               </CardContent>
             </Card>
           </div>
 
-          <div className="space-y-6">
-            {/* Shipping Info */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center">
-                  <Truck className="h-5 w-5 mr-2" />
+          {/* Right side info cards - more compact but consistent */}
+          <div className="lg:col-span-4 space-y-6">
+            {/* Shipping & Returns */}
+            <Card className="border-sky-200 shadow-sm">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center text-sky-700">
+                  <Truck className="h-4 w-4 mr-2" />
                   Shipping & Returns
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="space-y-2 pt-0 pb-4 text-sm">
                 <div className="flex items-center gap-2">
-                  <Truck className="h-4 w-4 text-green-500" />
-                  <span className="text-sm">Free shipping available</span>
+                  <Truck className="h-4 w-4 text-emerald-500" />
+                  <span>Free shipping available</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <RotateCcw className="h-4 w-4 text-blue-500" />
-                  <span className="text-sm">30-day return policy</span>
+                  <span>30-day return policy</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Shield className="h-4 w-4 text-purple-500" />
-                  <span className="text-sm">Buyer protection</span>
+                  <span>Buyer protection</span>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Trust Badges */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Why Buy Here?</CardTitle>
+            {/* Why Buy Here */}
+            <Card className="border-sky-200 shadow-sm">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base text-sky-700">Why Buy Here?</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="space-y-2 pt-0 pb-4 text-sm">
                 <div className="flex items-center gap-2">
-                  <Shield className="h-4 w-4 text-green-500" />
-                  <span className="text-sm">Verified seller</span>
+                  <Shield className="h-4 w-4 text-emerald-500" />
+                  <span>Verified seller</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <ThumbsUp className="h-4 w-4 text-blue-500" />
-                  <span className="text-sm">High rating seller</span>
+                  <span>High rating seller</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <MessageSquare className="h-4 w-4 text-purple-500" />
-                  <span className="text-sm">Quick responses</span>
+                  <span>Quick responses</span>
                 </div>
               </CardContent>
             </Card>
           </div>
         </div>
 
-        {/* Reviews Section - Logical & Clean Layout */}
+        {/* Reviews Section */}
         <div className="mb-12">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
+          <Card className="border-sky-200 shadow-sm">
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center justify-between text-sky-700">
                 <div className="flex items-center gap-2">
                   <MessageSquare className="h-5 w-5" />
                   Reviews &amp; Ratings
@@ -397,7 +411,7 @@ export default function ProductDetailsPage() {
 
             <CardContent>
               {/* 1. Current User's Review (Top Priority) */}
-              {userReview && (
+              {userReview && !isEditingReview && (
                 <div className="mb-8">
                   <div className="flex items-center gap-2 mb-3">
                     <span className="text-sm font-semibold text-yellow-600">Your Review</span>
@@ -427,9 +441,7 @@ export default function ProductDetailsPage() {
                           size="sm"
                           variant="outline"
                           className="mt-4"
-                          onClick={() => {
-                            document.getElementById('edit-review-form')?.scrollIntoView({ behavior: 'smooth' });
-                          }}
+                          onClick={() => setIsEditingReview(true)}
                         >
                           Edit Review
                         </Button>
@@ -439,10 +451,39 @@ export default function ProductDetailsPage() {
                 </div>
               )}
 
+              {/* Edit Review Form */}
+              {userReview && isEditingReview && (
+                <div className="mb-8">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-sm font-semibold text-yellow-600">Edit Your Review</span>
+                    <Button 
+                      size="sm" 
+                      variant="ghost" 
+                      onClick={() => setIsEditingReview(false)}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                  <ReviewForm
+                    itemId={productId}
+                    productName={product.title}
+                    existingReview={{
+                      id: userReview.id,
+                      rating: userReview.rating,
+                      comment: userReview.comment,
+                    }}
+                    onReviewSubmitted={() => {
+                      setIsEditingReview(false);
+                      fetchProductDetails();
+                    }}
+                  />
+                </div>
+              )}
+
               {/* 2. Community Reviews */}
               <div>
                 <div className="flex items-center gap-2 mb-4">
-                  <span className="text-sm font-semibold text-gray-600">Community Reviews</span>
+                  <span className="text-sm font-semibold text-gray-600">Reviews for this product</span>
                   <div className="h-px flex-1 bg-gray-200" />
                 </div>
 
@@ -471,9 +512,9 @@ export default function ProductDetailsPage() {
                     ))}
                   </div>
                 ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    No community reviews yet. Be the first!
-                  </div>
+                   <div className="text-center py-8 text-muted-foreground">
+                     No reviews yet for this product. Be the first!
+                   </div>
                 )}
               </div>
 
@@ -483,17 +524,7 @@ export default function ProductDetailsPage() {
                   <h3 className="text-lg font-semibold mb-4">Write a Review</h3>
                   <ReviewForm
                     itemId={productId}
-                    onReviewSubmitted={fetchProductDetails}
-                  />
-                </div>
-              )}
-
-              {/* 4. Edit Form (appears when user clicks Edit) */}
-              {userReview && (
-                <div id="edit-review-form" className="mt-10 pt-8 border-t">
-                  <h3 className="text-lg font-semibold mb-4">Edit Your Review</h3>
-                  <ReviewForm
-                    itemId={productId}
+                    productName={product.title}
                     onReviewSubmitted={fetchProductDetails}
                   />
                 </div>
@@ -506,32 +537,47 @@ export default function ProductDetailsPage() {
         {relatedProducts.length > 0 && (
           <div>
             <h2 className="text-2xl font-bold text-foreground mb-6">Related Products</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-5">
               {relatedProducts.map((relatedProduct) => (
-                <Card key={relatedProduct.id} className="hover:shadow-lg transition-shadow">
-                  <div className="aspect-square bg-muted rounded-t-lg flex items-center justify-center">
+                <Card 
+                  key={relatedProduct.id} 
+                  className="group flex flex-col h-full border border-sky-200 rounded-2xl overflow-hidden hover:border-sky-300 hover:shadow-lg transition-all bg-white"
+                >
+                  {/* Image - taller and better proportion */}
+                  <div className="relative aspect-square bg-slate-100 flex-shrink-0 overflow-hidden">
                     {relatedProduct.images?.[0] ? (
                       <img
                         src={relatedProduct.images[0]}
                         alt={relatedProduct.title}
-                        className="w-full h-full object-cover rounded-t-lg"
+                        className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-300"
                       />
                     ) : (
-                      <Package className="h-8 w-8 text-muted-foreground" />
+                      <div className="w-full h-full flex items-center justify-center bg-slate-100">
+                        <Package className="h-9 w-9 text-slate-400" />
+                      </div>
                     )}
                   </div>
-                  <CardContent className="p-4">
-                    <h3 className="font-medium mb-2 line-clamp-2">{relatedProduct.title}</h3>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-lg font-bold text-primary">
-                        ${relatedProduct.price.toFixed(2)}
+
+                  {/* Content */}
+                  <CardContent className="p-3 flex flex-col flex-1">
+                    <h3 className="font-semibold text-[13.5px] leading-tight text-gray-900 line-clamp-2 mb-1.5 group-hover:text-sky-600 transition-colors">
+                      {relatedProduct.title}
+                    </h3>
+
+                    <div className="flex items-center justify-between mt-auto">
+                      <span className="text-lg font-bold text-sky-600 tracking-tight">
+                        ৳{Number(relatedProduct.price).toLocaleString()}
                       </span>
-                      <div className="flex items-center">
+                      <div className="flex items-center text-amber-500">
                         {renderStars(Math.floor(relatedProduct.rating), 'sm')}
                       </div>
                     </div>
-                    <Link href={`/products/${relatedProduct.id}`}>
-                      <Button size="sm" className="w-full">
+
+                    <Link href={`/products/${relatedProduct.id}`} className="mt-2">
+                      <Button 
+                        size="sm" 
+                        className="w-full h-8 text-xs bg-sky-600 hover:bg-sky-700 transition-colors"
+                      >
                         View Details
                       </Button>
                     </Link>

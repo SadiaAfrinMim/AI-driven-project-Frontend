@@ -122,76 +122,115 @@ export default function ProductsPage() {
     ));
   };
 
-  const ProductCard = ({ product }: { product: Product }) => (
-    <Card className="hover:shadow-lg transition-all duration-300 hover:-translate-y-1 group">
-      <div className="relative overflow-hidden rounded-t-lg">
-        <div className="aspect-square bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900 flex items-center justify-center">
+  const ProductCard = ({ product }: { product: Product }) => {
+    const cleanTags = (product.tags || []).filter(
+      (t) => t && t.toLowerCase() !== (product.category || '').toLowerCase()
+    );
+    const stockQty = product.quantity ?? 0;
+
+    return (
+      <Card className="group flex flex-col h-full overflow-hidden border border-gray-200 hover:border-sky-300 hover:shadow-xl transition-all bg-white rounded-2xl">
+        {/* Image */}
+        <div className="relative h-48 bg-gray-100 flex-shrink-0 overflow-hidden">
           {product.images?.[0] ? (
             <img
               src={product.images[0]}
               alt={product.title}
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+              className="w-full h-full object-cover group-hover:scale-[1.04] transition-transform duration-300"
             />
           ) : (
-            <Package className="h-12 w-12 text-muted-foreground" />
-          )}
-        </div>
-        {product.isAIContent && (
-          <Badge className="absolute top-2 left-2 bg-blue-500 text-white">
-            AI Generated
-          </Badge>
-        )}
-        <div className="absolute top-2 right-2">
-          <div className="flex items-center bg-white/90 dark:bg-gray-800/90 rounded-full px-2 py-1">
-            <div className="flex items-center mr-1">
-              {renderStars(Math.floor(product.rating))}
+            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200">
+              <Package className="h-10 w-10 text-gray-400" />
             </div>
-            <span className="text-xs font-medium">({product.reviewCount})</span>
-          </div>
-        </div>
-      </div>
-      <CardContent className="p-4">
-        <div className="mb-2">
-          <Badge variant="outline" className="text-xs">
+          )}
+
+          {/* Category badge */}
+          <Badge variant="secondary" className="absolute top-2 left-2 text-[10px] bg-white/90 backdrop-blur border">
             {product.category}
           </Badge>
-        </div>
-        <h3 className="font-semibold text-lg mb-2 line-clamp-2 group-hover:text-primary transition-colors">
-          {product.title}
-        </h3>
-        <p className="text-muted-foreground text-sm mb-3 line-clamp-2">
-          {product.description}
-        </p>
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center text-sm text-muted-foreground">
-            <MapPin className="h-4 w-4 mr-1" />
-            {product.location}
+
+          {/* AI badge */}
+          {product.isAIContent && (
+            <Badge className="absolute top-2 right-2 text-[10px] bg-purple-600 text-white">
+              AI Generated
+            </Badge>
+          )}
+
+          {/* Rating badge */}
+          <div className="absolute bottom-2 right-2 flex items-center gap-1 bg-white/95 rounded-full px-2 py-0.5 shadow-sm">
+            <div className="flex items-center text-amber-500">
+              {renderStars(Math.floor(product.rating))}
+            </div>
+            <span className="text-[11px] font-medium text-gray-700">
+              {product.rating > 0 ? product.rating.toFixed(1) : '—'}
+            </span>
+            <span className="text-[10px] text-gray-500">({product.reviewCount})</span>
           </div>
-          <div className="flex items-center text-sm text-muted-foreground">
-            <Calendar className="h-4 w-4 mr-1" />
-            {new Date(product.createdAt).toLocaleDateString()}
-          </div>
         </div>
-         <div className="flex items-center justify-between">
-           <div>
-             <div className="text-2xl font-bold text-primary">
-               ${product.price.toFixed(2)}
-             </div>
-             {product.quantity !== undefined && (
-               <div className="text-xs text-muted-foreground">
-                 Stock: {product.quantity}
-               </div>
-             )}
-           </div>
-           <Link href={`/products/${product.id}`}>
-             <Button size="sm">
-               View Details
-             </Button>
-           </Link>
-         </div>
-      </CardContent>
-    </Card>
-  );
+
+        {/* Content */}
+        <CardContent className="p-4 flex flex-col flex-1">
+          {/* Title */}
+          <h3 className="font-semibold text-[15px] leading-snug text-gray-900 line-clamp-2 mb-1 group-hover:text-sky-600 transition-colors">
+            {product.title}
+          </h3>
+
+          {/* Description */}
+          <p className="text-xs text-gray-600 line-clamp-2 mb-3 min-h-[32px]">
+            {product.description || 'No description'}
+          </p>
+
+          {/* Price + Stock */}
+          <div className="flex items-baseline justify-between mb-2">
+            <div>
+            <span className="text-2xl font-bold text-sky-600 tracking-tighter">
+              ৳{Number(product.price).toLocaleString()}
+            </span>
+            </div>
+            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold
+              ${stockQty > 10 ? 'bg-sky-100 text-sky-700' : 
+                stockQty > 0 ? 'bg-amber-100 text-amber-700' : 
+                'bg-red-100 text-red-700'}`}>
+              Stock: {stockQty}
+            </span>
+          </div>
+
+          {/* Tags */}
+          {cleanTags.length > 0 && (
+            <div className="flex flex-wrap gap-1 mb-3 min-h-[20px]">
+              {cleanTags.slice(0, 5).map((tag) => (
+              <span key={tag} className="text-[9.5px] px-1.5 py-0 rounded bg-sky-100 text-sky-700 font-medium h-4">
+                {tag}
+              </span>
+              ))}
+            </div>
+          )}
+
+          {/* Location + Date */}
+          <div className="flex items-center justify-between text-[11px] text-gray-500 mb-3 mt-auto">
+            <div className="flex items-center gap-1">
+              <MapPin className="h-3.5 w-3.5" />
+              {product.location || 'N/A'}
+            </div>
+            <div className="flex items-center gap-1">
+              <Calendar className="h-3.5 w-3.5" />
+              {new Date(product.createdAt).toLocaleDateString()}
+            </div>
+          </div>
+
+          {/* Action */}
+          <Link href={`/products/${product.id}`} className="mt-1">
+            <Button 
+              size="sm" 
+              className="w-full h-9 text-sm bg-sky-600 hover:bg-sky-700 transition-colors"
+            >
+              View Details
+            </Button>
+          </Link>
+        </CardContent>
+      </Card>
+    );
+  };
 
   const ProductListItem = ({ product }: { product: Product }) => (
     <Card className="hover:shadow-md transition-shadow">
@@ -423,9 +462,9 @@ export default function ProductsPage() {
             </div>
           ) : (
             <>
-              <div className={`grid gap-6 mb-8 ${
+              <div className={`grid gap-5 mb-8 ${
                 viewMode === 'grid'
-                  ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
+                  ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5'
                   : 'grid-cols-1'
               }`}>
                 {products.map((product) => (

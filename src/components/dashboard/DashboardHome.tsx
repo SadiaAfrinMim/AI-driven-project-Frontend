@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { fetchApi, api } from '@/lib/api';
 import Cookies from 'js-cookie';
+import { ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { DashboardLoading } from '@/components/dashboard/DashboardLoading';
@@ -67,6 +68,11 @@ export default function DashboardHome() {
   const [user, setUser] = useState<User | null>(null);
   const [stats, setStats] = useState<Stats>({});
   const [loading, setLoading] = useState(true);
+
+  // Chart data for MANAGER dashboard graphs
+  const [statusData, setStatusData] = useState<any[]>([]);
+  const [categoryData, setCategoryData] = useState<any[]>([]);
+  const [aiData, setAiData] = useState<any[]>([]);
 
   useEffect(() => {
     const getUser = () => {
@@ -126,18 +132,55 @@ export default function DashboardHome() {
             pendingItems,
           });
         } else if (userData?.role === 'MANAGER') {
-          const [itemsRes, reviewsRes] = await Promise.all([
-            fetchApi(api.items),
+          const [myItemsRes, reviewsRes] = await Promise.all([
+            fetchApi(`${api.items}/my-items?limit=500`),
             fetchApi(api.reviews)
           ]);
 
-          const totalItems = itemsRes?.data?.items ? itemsRes.data.items.length : (Array.isArray(itemsRes?.data) ? itemsRes.data.length : (itemsRes?.data?.meta?.total || 0));
+          const items = myItemsRes?.data?.items || myItemsRes?.items || (Array.isArray(myItemsRes?.data) ? myItemsRes.data : []);
+          const totalItems = items.length;
+
           const totalReviews = reviewsRes?.data?.reviews ? reviewsRes.data.reviews.length : (Array.isArray(reviewsRes?.data) ? reviewsRes.data.length : (reviewsRes?.data?.meta?.total || 0));
+
+          // Compute status breakdown
+          const approved = items.filter((i: any) => i.status === 'APPROVED').length;
+          const pending = items.filter((i: any) => i.status === 'PENDING').length;
+          const rejected = items.filter((i: any) => i.status === 'REJECTED').length;
+
+          const newStatusData = [
+            { name: 'Approved', value: approved, color: '#10b981' },
+            { name: 'Pending', value: pending, color: '#f59e0b' },
+            { name: 'Rejected', value: rejected, color: '#ef4444' },
+          ].filter(d => d.value > 0);
+
+          // Category distribution (top 6)
+          const catMap: Record<string, number> = {};
+          items.forEach((i: any) => {
+            const cat = i.category || 'Other';
+            catMap[cat] = (catMap[cat] || 0) + 1;
+          });
+          const newCategoryData = Object.entries(catMap)
+            .map(([name, value]) => ({ name, value }))
+            .sort((a, b) => b.value - a.value)
+            .slice(0, 6);
+
+          // AI vs Manual
+          const aiCount = items.filter((i: any) => i.isAIContent === true).length;
+          const manualCount = totalItems - aiCount;
+          const newAiData = [
+            { name: 'AI Generated', value: aiCount, color: '#8b5cf6' },
+            { name: 'Manual', value: manualCount, color: '#64748b' },
+          ].filter(d => d.value > 0);
+
+          setStatusData(newStatusData);
+          setCategoryData(newCategoryData);
+          setAiData(newAiData);
 
           setStats({
             totalItems,
             totalReviews,
-            aiInteractions: 0,
+            aiInteractions: aiCount,
+            pendingItems: pending,
           });
         } else {
           try {
@@ -360,7 +403,7 @@ export default function DashboardHome() {
               <Badge className="bg-blue-100 text-blue-700">Total</Badge>
             </div>
             <div className="text-4xl font-bold mb-1">{stats.totalItems || 0}</div>
-            <p className="text-sm text-gray-600">Products on Platform</p>
+            <p className="text-sm text-gray-600">My Products</p>
           </CardContent>
         </Card>
 
@@ -398,6 +441,106 @@ export default function DashboardHome() {
             <p className="text-sm text-gray-600">AI Interactions</p>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Content Insights - 3 Relevant Graphs for Manager */}
+      <div>
+        <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+          <BarChart3 className="w-6 h-6 text-blue-600" /> Content Insights
+        </h2>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* 1. Status Distribution Pie */}
+          <Card className="border border-gray-200 shadow-sm hover:shadow-md transition-all bg-white">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base font-semibold flex items-center gap-2 text-gray-800">
+                <AlertTriangle className="w-5 h-5 text-amber-600" /> Listing Status
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-2">
+              {statusData.length > 0 ? (
+                <ResponsiveContainer width="100%" height={240}>
+                  <PieChart>
+                    <Pie
+                      data={statusData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={55}
+                      outerRadius={85}
+                      dataKey="value"
+                      label={({ name, percent }) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}
+                    >
+                      {statusData.map((entry, index) => (
+                        <Cell key={`status-cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                    <Legend verticalAlign="bottom" height={36} />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-[240px] flex items-center justify-center text-gray-400 text-sm">No listings yet</div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* 2. Category Bar Chart */}
+          <Card className="border border-gray-200 shadow-sm hover:shadow-md transition-all bg-white">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base font-semibold flex items-center gap-2 text-gray-800">
+                <BarChart3 className="w-5 h-5 text-blue-600" /> Top Categories
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-2">
+              {categoryData.length > 0 ? (
+                <ResponsiveContainer width="100%" height={240}>
+                  <BarChart data={categoryData} layout="vertical">
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                    <XAxis type="number" tick={{ fontSize: 11 }} />
+                    <YAxis dataKey="name" type="category" width={90} tick={{ fontSize: 11 }} />
+                    <Tooltip />
+                    <Bar dataKey="value" fill="#3b82f6" radius={[0, 4, 4, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-[240px] flex items-center justify-center text-gray-400 text-sm">No category data</div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* 3. AI Adoption Pie */}
+          <Card className="border border-gray-200 shadow-sm hover:shadow-md transition-all bg-white">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base font-semibold flex items-center gap-2 text-gray-800">
+                <Bot className="w-5 h-5 text-violet-600" /> AI vs Manual
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-2">
+              {aiData.length > 0 ? (
+                <ResponsiveContainer width="100%" height={240}>
+                  <PieChart>
+                    <Pie
+                      data={aiData}
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={85}
+                      dataKey="value"
+                      label={({ name, percent }) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}
+                    >
+                      {aiData.map((entry, index) => (
+                        <Cell key={`ai-cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                    <Legend verticalAlign="bottom" height={36} />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-[240px] flex items-center justify-center text-gray-400 text-sm">No AI data</div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+        <p className="text-xs text-gray-500 mt-3 text-center">Insights based on your product listings</p>
       </div>
 
       {/* Manager Actions */}
@@ -450,48 +593,29 @@ export default function DashboardHome() {
         right={<Badge className="bg-red-600 text-white text-lg px-4 py-1">ADMIN</Badge>}
       />
 
-      {/* System Overview Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+      {/* System Overview Stats - Clean Admin View */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard
           title="Total Users"
           value={stats.totalUsers || 0}
           icon={<Users className="w-5 h-5 text-blue-600" />}
-          footer={<Badge className="bg-blue-100 text-blue-700">+12% this month</Badge>}
         />
         <StatCard
           title="Total Products"
           value={stats.totalItems || 0}
           icon={<Package className="w-5 h-5 text-green-600" />}
-          footer={<Badge className="bg-green-100 text-green-700">+8% this week</Badge>}
         />
         <StatCard
           title="Pending Approval"
           value={stats.pendingItems || 0}
           icon={<AlertTriangle className="w-5 h-5 text-orange-600" />}
-          footer={<Badge className="bg-orange-100 text-orange-700">Needs Attention</Badge>}
+          footer={<Badge className="bg-orange-100 text-orange-700">Needs Action</Badge>}
         />
-
         <StatCard
           title="Total Reviews"
           value={stats.totalReviews || 0}
           icon={<MessageSquare className="w-5 h-5 text-purple-600" />}
-          footer={<Badge className="bg-purple-100 text-purple-700">Community</Badge>}
         />
-        <StatCard
-          title="AI Interactions"
-          value={stats.aiInteractions || 0}
-          icon={<Bot className="w-5 h-5 text-red-600" />}
-          footer={<Badge className="bg-red-100 text-red-700">Powered by AI</Badge>}
-        />
-
-        <Card className="shadow-lg hover:shadow-2xl transition-all border-t-4 border-t-pink-500">
-          <CardContent className="p-6 text-center">
-            <Bot className="w-10 h-10 mx-auto text-pink-500 mb-3" />
-            <div className="text-4xl font-bold">{stats.aiInteractions || 0}</div>
-            <p className="text-sm text-gray-600 mt-1">AI Interactions</p>
-            <Badge className="mt-2 bg-pink-100 text-pink-700">+25% this week</Badge>
-          </CardContent>
-        </Card>
       </div>
 
       {/* Admin Control Panels */}

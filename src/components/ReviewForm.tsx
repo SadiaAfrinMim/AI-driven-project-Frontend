@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,16 +10,24 @@ import { toast } from 'sonner';
 
 interface ReviewFormProps {
   itemId: string;
+  productName?: string;
   onReviewSubmitted: () => void;
+  existingReview?: {
+    id: string;
+    rating: number;
+    comment: string;
+  } | null;
 }
 
-export function ReviewForm({ itemId, onReviewSubmitted }: ReviewFormProps) {
-  const [rating, setRating] = useState(5);
-  const [comment, setComment] = useState('');
+export function ReviewForm({ itemId, productName, onReviewSubmitted, existingReview }: ReviewFormProps) {
+  const [rating, setRating] = useState(existingReview?.rating || 5);
+  const [comment, setComment] = useState(existingReview?.comment || '');
   const [hoveredRating, setHoveredRating] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [useAI, setUseAI] = useState(false);
+  const [useAI, setUseAI] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [hasGeneratedAI, setHasGeneratedAI] = useState(false);
+  const [autoAttempted, setAutoAttempted] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,19 +49,34 @@ export function ReviewForm({ itemId, onReviewSubmitted }: ReviewFormProps) {
 
     setIsSubmitting(true);
     try {
-      await fetchApi(api.reviews, {
-        method: 'POST',
-        body: JSON.stringify({
-          itemId,
-          rating,
-          comment: comment.trim(),
-        }),
-      });
-
-      toast.success('Review submitted successfully!');
-      setComment('');
-      setRating(5);
-      onReviewSubmitted();
+      if (existingReview) {
+        // Edit mode
+        await fetchApi(`${api.reviews}/${existingReview.id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({
+            rating,
+            comment: comment.trim(),
+          }),
+        });
+        toast.success('Review updated successfully!');
+        setHasGeneratedAI(false);
+        onReviewSubmitted();
+      } else {
+        // Create new review
+        await fetchApi(api.reviews, {
+          method: 'POST',
+          body: JSON.stringify({
+            itemId,
+            rating,
+            comment: comment.trim(),
+          }),
+        });
+        toast.success('Review submitted successfully!');
+        setComment('');
+        setRating(5);
+        setHasGeneratedAI(false);
+        onReviewSubmitted();
+      }
     } catch (error: any) {
       console.error('Failed to submit review:', error);
       toast.error(error.message || 'Failed to submit review. Please try again.');
@@ -65,18 +88,40 @@ export function ReviewForm({ itemId, onReviewSubmitted }: ReviewFormProps) {
   const handleAIGenerate = async () => {
     setIsGenerating(true);
     try {
+      const nameToUse = productName || 'this product';
       const res = await fetchApi(api.ai.generateReview, {
         method: 'POST',
-        body: JSON.stringify({ productName: 'this product', rating }),
+        body: JSON.stringify({ productName: nameToUse, rating }),
       });
       setComment(res.data.comment);
+      setHasGeneratedAI(true);
       toast.success('AI review generated! You can edit it before posting.');
-    } catch {
-      toast.error('Failed to generate AI review');
+    } catch (error: any) {
+      console.error('AI review generation error:', error);
+      // Only show error toast on manual click, not on silent auto attempt
+      if (!autoAttempted) {
+        toast.error(error?.message || 'Failed to generate AI review');
+      }
     } finally {
       setIsGenerating(false);
+      setAutoAttempted(false);
     }
   };
+
+  useEffect(() => {
+    setHasGeneratedAI(false);
+    if (existingReview) {
+      setRating(existingReview.rating);
+      setComment(existingReview.comment);
+    }
+  }, [existingReview]);
+
+  useEffect(() => {
+    if (useAI && !hasGeneratedAI && !isGenerating) {
+      setAutoAttempted(true);
+      handleAIGenerate();
+    }
+  }, [useAI, hasGeneratedAI, rating]);
 
   return (
     <Card>
@@ -128,17 +173,22 @@ export function ReviewForm({ itemId, onReviewSubmitted }: ReviewFormProps) {
               </div>
             </div>
 
-            {useAI && (
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={handleAIGenerate} 
-                disabled={isGenerating}
-                className="w-full mb-3"
-              >
-                {isGenerating ? 'Generating with AI...' : '✨ Generate AI Review'}
-              </Button>
-            )}
+              {useAI && (
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={handleAIGenerate} 
+                  disabled={isGenerating}
+                  className="w-full mb-3"
+                >
+                  {isGenerating 
+                    ? 'Generating with AI...' 
+                    : hasGeneratedAI 
+                      ? '🔄 Regenerate (New AI Review)' 
+                      : '✨ Generate AI Review'
+                  }
+                </Button>
+              )}
 
             <Textarea
               placeholder="Share your experience with this product..."
@@ -151,7 +201,9 @@ export function ReviewForm({ itemId, onReviewSubmitted }: ReviewFormProps) {
           </div>
 
           <Button type="submit" disabled={isSubmitting || !comment.trim()} className="w-full">
-            {isSubmitting ? 'Submitting...' : 'Submit Review'}
+            {isSubmitting 
+              ? (existingReview ? 'Updating...' : 'Submitting...') 
+              : (existingReview ? 'Update Review' : 'Submit Review')}
           </Button>
         </form>
       </CardContent>

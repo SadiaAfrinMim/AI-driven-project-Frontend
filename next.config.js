@@ -1,12 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  reactCompiler: true,
-  distDir: process.env.NEXT_DIST_DIR || '.next',
+  // Temporarily disabled — reactCompiler + Turbopack is unstable and causes panics
+  // reactCompiler: true,
 
-  // Disable Turbopack (unstable and causing panics after dashboard restructure)
-  experimental: {
-    turbopack: false,
-  },
+  distDir: process.env.NEXT_DIST_DIR || '.next',
 };
 
 module.exports = nextConfig;

@@ -84,13 +84,21 @@ export default function DashboardItemsPage() {
   const fetchItems = async () => {
     setLoading(true);
     try {
-      const endpoint = isManager ? `${api.items}/my-items` : api.items;
+      let endpoint = api.items;
+      let query = '';
 
-      // Admin sees only PENDING items (for approval), others see only APPROVED
-      const query = isAdmin ? '?status=PENDING' : '?status=APPROVED';
+      if (isAdmin) {
+        // Admins use this page mainly to approve pending items
+        endpoint = api.items;
+        query = '?status=PENDING';
+      } else {
+        // Regular users & managers see their own items (all statuses: pending + approved)
+        endpoint = `${api.items}/my-items`;
+        query = '';
+      }
+
       const data = await fetchApi(`${endpoint}${query}`);
-
-      const list = data?.data?.items || data?.items;
+      const list = data?.data?.items || data?.items || [];
       setItems(Array.isArray(list) ? list : []);
     } catch (e) {
       console.error('Failed to fetch items:', e);
@@ -203,7 +211,7 @@ export default function DashboardItemsPage() {
     return sorted.slice(0,5).map(w=>`#${w}`);
   };
 
-  const generateItemContent = async (type: 'title' | 'description' | 'all') => {
+  const generateItemContent = async (type: 'title' | 'description' | 'all' | 'tags') => {
     if (!formCategory.trim()) {
       setError('Please enter a category first');
       return;
@@ -213,9 +221,9 @@ export default function DashboardItemsPage() {
     try {
       if (type === 'title') setIsGeneratingTitle(true);
       if (type === 'description') setIsGeneratingDescription(true);
-      if (type === 'all') setIsGeneratingAll(true);
+      if (type === 'all' || type === 'tags') setIsGeneratingAll(true);
 
-      const payload = {
+      const payload: any = {
         topic: formCategory || formTitle || undefined,
         category: formCategory,
         price: formPrice ? Number(formPrice) : undefined,
@@ -223,6 +231,10 @@ export default function DashboardItemsPage() {
         length: 'medium' as const,
         tone: 'professional' as const,
       };
+      if (type === 'title') payload.type = 'item-title';
+      else if (type === 'description') payload.type = 'item-description';
+      else if (type === 'tags') payload.type = 'tags';
+      // 'all' leaves type undefined (generates title+desc+tags)
 
       let response: any = null;
       if (generationMode === 'ai') {
@@ -231,16 +243,19 @@ export default function DashboardItemsPage() {
           body: JSON.stringify(payload),
         });
 
-        // Apply AI-generated content
-        if ((type === 'title' || type === 'all') && response?.title) {
-          setFormTitle(response.title);
+        // Apply AI-generated content (response is wrapped by sendResponse → { success, message, data: {...} })
+        const aiData = response?.data || response;
+
+        if ((type === 'title' || type === 'all') && aiData?.title) {
+          setFormTitle(aiData.title);
         }
-        if ((type === 'description' || type === 'all') && response?.description) {
-          setFormDescription(response.description);
+        if ((type === 'description' || type === 'all') && aiData?.description) {
+          setFormDescription(aiData.description);
         }
 
-        if (Array.isArray(response?.tags) && response.tags.length > 0) {
-          const unique = Array.from(new Set(response.tags.map((t: string) => t.trim()).filter(Boolean)));
+        // Tags: only set when the user asked for tags (prevents "Generate Tags" button from overwriting other fields)
+        if ((type === 'tags' || type === 'all') && Array.isArray(aiData?.tags) && aiData.tags.length > 0) {
+          const unique = Array.from(new Set(aiData.tags.map((t: string) => t.trim()).filter(Boolean)));
           setFormTags(unique.slice(0, 5).join(', '));
         }
 
@@ -322,6 +337,7 @@ export default function DashboardItemsPage() {
         title: formTitle,
         description: formDescription,
         price: Number(formPrice),
+        quantity: formQuantity ? Number(formQuantity) : 0,
         location: formLocation,
         category: formCategory,
         tags: parseTagsArray(formTags),
@@ -352,27 +368,27 @@ export default function DashboardItemsPage() {
         subtitle="Manage product listings and inventory"
       />
 
-        {isPrivileged && (
-          <Button
-            onClick={() => {
-              setModalMode('add');
-              setSelectedItem(null);
-              setFormTitle('');
-              setFormDescription('');
-              setFormPrice('');
-              setFormLocation('');
-              setFormCategory('');
-              setFormTags('');
-              setFormIsAIContent(false);
-              setFormImages([]);
-              setError(null);
-              setModalOpen(true);
-            }}
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Add Item
-          </Button>
-        )}
+        {/* All logged-in users can add their own items */}
+        <Button
+          onClick={() => {
+            setModalMode('add');
+            setSelectedItem(null);
+            setFormTitle('');
+            setFormDescription('');
+            setFormPrice('');
+            setFormLocation('');
+            setFormCategory('');
+            setFormTags('');
+            setFormIsAIContent(false);
+            setFormImages([]);
+            setFormQuantity('1');   // sensible default stock
+            setError(null);
+            setModalOpen(true);
+          }}
+        >
+          <Plus className="w-4 h-4 mr-2" />
+          Add Item
+        </Button>
       {/* Admin sees only pending items in main list with Approve/Reject buttons */}
 
       {/* Search */}
@@ -400,145 +416,182 @@ export default function DashboardItemsPage() {
           <CardContent className="text-center py-10 text-gray-500">No items found</CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredItems.map((item) => (
-            <Card key={item.id} className="overflow-hidden hover:shadow-xl transition-shadow">
-              <div className="aspect-video bg-gray-200 relative">
-                {Array.isArray(item.images) && item.images.length > 0 ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={item.images[0]}
-                    alt={item.title}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-gray-400">No Image</div>
-                )}
-                {item.isAIContent && (
-                  <Badge className="absolute top-2 right-2 bg-purple-100 text-purple-800">
-                    AI Generated
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
+          {filteredItems.map((item) => {
+            // Show tags as-is (AI generates 5 relevant ones). Only remove exact category duplicates if any.
+            const cleanTags = (item.tags || []).filter(
+              (t) => t && t.toLowerCase() !== (item.category || '').toLowerCase()
+            );
+
+            const stockQty = item.quantity ?? 0;
+
+            return (
+              <Card key={item.id} className="group overflow-hidden border border-gray-200 hover:border-gray-300 hover:shadow-lg transition-all flex flex-col h-full bg-white rounded-xl">
+                {/* Image Section with fixed height */}
+                <div className="relative h-40 bg-gray-100 flex-shrink-0 overflow-hidden">
+                  {Array.isArray(item.images) && item.images.length > 0 ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={item.images[0]}
+                      alt={item.title}
+                      className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-300"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-gray-400 text-sm bg-gradient-to-br from-gray-100 to-gray-200">
+                      No Image
+                    </div>
+                  )}
+
+                  {/* Category badge (top-left) */}
+                  <Badge variant="secondary" className="absolute top-2 left-2 text-[10px] px-2 py-0 h-5 bg-white/90 backdrop-blur border">
+                    {item.category}
                   </Badge>
-                )}
-              </div>
 
-              <CardContent className="p-4">
-                <div className="space-y-2">
-                  <h3 className="font-semibold text-lg text-gray-900 line-clamp-2">{item.title}</h3>
-                  <p className="text-sm text-gray-600 line-clamp-2">{item.description}</p>
+                  {/* AI badge (top-right) */}
+                  {item.isAIContent && (
+                    <Badge className="absolute top-2 right-2 text-[10px] px-1.5 py-0 h-5 bg-purple-600 text-white">
+                      AI Generated
+                    </Badge>
+                  )}
 
-                   <div className="flex items-center justify-between">
-                      <span className="text-lg font-bold text-green-600">${item.price}</span>
-                      {item.quantity !== undefined && (
-                        <span className="text-sm text-muted-foreground ml-2">Stock: {item.quantity}</span>
-                      )}
-                      {item.rating && item.rating > 0 ? (
-                        <div className="flex items-center space-x-1">
-                          <Star className="w-4 h-4 text-yellow-400 fill-current" />
-                          <span className="text-sm text-gray-600">{item.rating}</span>
-                          {item.reviewCount !== undefined && (
-                            <span className="text-xs text-muted-foreground">({item.reviewCount})</span>
-                          )}
-                        </div>
-                      ) : (
-                        <span className="text-xs text-gray-400">No reviews</span>
-                      )}
-                   </div>
-
-                   <div className="flex flex-wrap gap-1">
-                     {/* Show category as primary badge, and tags excluding the category to avoid duplicates */}
-                     <Badge variant="secondary">{item.category}</Badge>
-                     {(() => {
-                       const tags: string[] = (item.tags || []).filter(t => t && t.toLowerCase() !== (item.category || '').toLowerCase());
-                       const shown = tags.slice(0, 2);
-                       return (
-                         <>
-                           {shown.map(tag => (
-                             <Badge key={tag} variant="outline" className="text-xs">
-                               {tag}
-                             </Badge>
-                           ))}
-                           {tags.length > 2 && (
-                             <Badge variant="outline" className="text-xs">
-                               +{tags.length - 2}
-                             </Badge>
-                           )}
-                         </>
-                       );
-                     })()}
-                   </div>
-
-                  <p className="text-sm text-gray-500">{item.location}</p>
-
-                   <div className="flex space-x-2 pt-2">
-                      {isPrivileged ? (
-                        <>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="flex-1"
-                            onClick={() => {
-                              setModalMode('edit');
-                              setSelectedItem(item);
-                              setFormTitle(item.title || '');
-                              setFormDescription(item.description || '');
-                               setFormPrice(String(item.price ?? ''));
-                               setFormQuantity(String(item.quantity ?? ''));
-                              setFormLocation(item.location || '');
-                              setFormCategory(item.category || '');
-                              setFormTags((item.tags || []).join(', '));
-                              setFormIsAIContent(!!item.isAIContent);
-                              setFormImages([]);
-                              setError(null);
-                              setModalOpen(true);
-                            }}
-                          >
-                            <Edit className="w-4 h-4 mr-1" />
-                             Edit
-                           </Button>
-
-                           {item.ownerId === currentUserId && (
-                             <Button
-                               variant="destructive"
-                               size="sm"
-                               className="flex-1"
-                               onClick={() => handleDeleteItem(item.id)}
-                             >
-                               <Trash2 className="w-4 h-4 mr-1" />
-                               Delete
-                             </Button>
-                           )}
-
-                           {isAdmin && (
-                            <>
-                              <Button
-                                size="sm"
-                                onClick={() => handleApprove(item.id)}
-                                className="bg-green-600 hover:bg-green-700"
-                              >
-                                Approve
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="destructive"
-                                onClick={() => handleReject(item.id)}
-                              >
-                                Reject
-                              </Button>
-                            </>
-                          )}
-
-                       </>
-                     ) : (
-                       <Button variant="outline" size="sm" onClick={() => alert('You do not have permission to edit or delete this item')}>
-                         <Edit className="w-4 h-4 mr-1" />
-                         View
-                       </Button>
-                     )}
-                  </div>
+                  {/* No stock overlay on image - cleaner look */}
                 </div>
-              </CardContent>
-            </Card>
-          ))}
+
+                {/* Content */}
+                <CardContent className="p-3 flex-1 flex flex-col text-sm">
+                  {/* Title */}
+                  <h3 className="font-semibold text-[14.5px] leading-tight text-gray-900 line-clamp-2 mb-1 min-h-[34px]">
+                    {item.title}
+                  </h3>
+
+                  {/* Description */}
+                  <p className="text-xs text-gray-600 line-clamp-2 mb-2 min-h-[30px]">
+                    {item.description || 'No description provided.'}
+                  </p>
+
+                  {/* Price + Rating */}
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-lg font-bold text-emerald-600 tracking-tight">
+                      ৳{Number(item.price).toLocaleString()}
+                    </span>
+
+                    {item.rating && item.rating > 0 ? (
+                      <div className="flex items-center gap-0.5 text-sm text-amber-500">
+                        <Star className="w-4 h-4 fill-current" />
+                        <span className="font-semibold text-gray-800">{item.rating}</span>
+                        {item.reviewCount !== undefined && (
+                          <span className="text-[10px] text-gray-500">({item.reviewCount})</span>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-[10px] text-gray-400">No reviews yet</span>
+                    )}
+                  </div>
+
+                  {/* Stock - Always show the actual number you entered */}
+                  <div className="mb-2">
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-semibold tracking-wide
+                      ${stockQty > 10 ? 'bg-emerald-100 text-emerald-700' : 
+                        stockQty > 0 ? 'bg-amber-100 text-amber-700' : 
+                        'bg-red-100 text-red-700'}`}>
+                      Stock: {stockQty}
+                    </span>
+                  </div>
+
+                  {/* Tags - Always try to show (AI now generates up to 5) */}
+                  <div className="flex flex-wrap gap-1 mb-2 min-h-[18px]">
+                    {cleanTags.length > 0 ? (
+                      cleanTags.slice(0, 5).map((tag) => (
+                        <span
+                          key={tag}
+                          className="inline-flex items-center text-[9.5px] px-1.5 py-0 rounded bg-gray-100 text-gray-700 font-medium h-4.5"
+                        >
+                          {tag}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-[9px] text-gray-400">No tags</span>
+                    )}
+                  </div>
+
+                  {/* Location */}
+                  <p className="text-[11px] text-gray-500 mb-2">{item.location}</p>
+
+                  {/* Action Buttons */}
+                  <div className="mt-auto pt-2 border-t flex flex-wrap gap-1.5">
+                    {isPrivileged ? (
+                      <>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1 h-7 text-xs"
+                          onClick={() => {
+                            setModalMode('edit');
+                            setSelectedItem(item);
+                            setFormTitle(item.title || '');
+                            setFormDescription(item.description || '');
+                            setFormPrice(String(item.price ?? ''));
+                            setFormQuantity(String(item.quantity ?? ''));
+                            setFormLocation(item.location || '');
+                            setFormCategory(item.category || '');
+                            setFormTags((item.tags || []).join(', '));
+                            setFormIsAIContent(!!item.isAIContent);
+                            setFormImages([]);
+                            setError(null);
+                            setModalOpen(true);
+                          }}
+                        >
+                          <Edit className="w-3 h-3 mr-1" />
+                          Edit
+                        </Button>
+
+                        {item.ownerId === currentUserId && (
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            className="flex-1 h-7 text-xs"
+                            onClick={() => handleDeleteItem(item.id)}
+                          >
+                            <Trash2 className="w-3 h-3 mr-1" />
+                            Delete
+                          </Button>
+                        )}
+
+                        {isAdmin && (
+                          <>
+                            <Button
+                              size="sm"
+                              className="h-7 text-xs bg-green-600 hover:bg-green-700 px-2.5"
+                              onClick={() => handleApprove(item.id)}
+                            >
+                              Approve
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              className="h-7 text-xs px-2.5"
+                              onClick={() => handleReject(item.id)}
+                            >
+                              Reject
+                            </Button>
+                          </>
+                        )}
+                      </>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full h-7 text-xs"
+                        onClick={() => alert('You do not have permission to edit or delete this item')}
+                      >
+                        View Details
+                      </Button>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
 
@@ -574,22 +627,35 @@ export default function DashboardItemsPage() {
               <div>
                 <h4 className="text-sm font-semibold text-gray-800 mb-3">Basic Information</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-medium text-gray-700">Title *</label>
-                    <div className="relative">
-                      <Input
-                        value={formTitle}
-                        onChange={(e) => setFormTitle(e.target.value)}
-                        placeholder="Enter product title"
-                        required
-                      />
-                      {formIsAIContent && (
-                        <Badge className="absolute right-2 top-1/2 -translate-y-1/2 text-xs bg-purple-100 text-purple-700 border-purple-200">
-                          AI
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
+                   <div className="space-y-1.5">
+                     <div className="flex items-center justify-between">
+                       <label className="text-sm font-medium text-gray-700">Title *</label>
+                       <Button
+                         type="button"
+                         variant="outline"
+                         size="sm"
+                         onClick={() => generateItemContent('title')}
+                         className="h-6 px-2 text-xs"
+                         disabled={isGeneratingTitle}
+                       >
+                         <Wand2 className="w-3 h-3 mr-1" />
+                         {isGeneratingTitle ? '...' : generationMode === 'ai' ? 'AI' : 'Write'}
+                       </Button>
+                     </div>
+                     <div className="relative">
+                       <Input
+                         value={formTitle}
+                         onChange={(e) => setFormTitle(e.target.value)}
+                         placeholder="Enter product title"
+                         required
+                       />
+                       {formIsAIContent && (
+                         <Badge className="absolute right-2 top-1/2 -translate-y-1/2 text-xs bg-purple-100 text-purple-700 border-purple-200">
+                           AI
+                         </Badge>
+                       )}
+                     </div>
+                   </div>
 
                    <div className="space-y-1.5">
                      <label className="text-sm font-medium text-gray-700">Price (BDT) *</label>
@@ -691,11 +757,11 @@ export default function DashboardItemsPage() {
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={() => generateItemContent('all')}
-                    className="h-7 px-3 text-xs"
-                  >
-                    <Wand2 className="w-3 h-3 mr-1" />
-                    {isGeneratingAll ? 'Generating...' : 'Generate Tags with AI'}
+                     onClick={() => generateItemContent('tags')}
+                     className="h-7 px-3 text-xs"
+                   >
+                     <Wand2 className="w-3 h-3 mr-1" />
+                     {isGeneratingAll ? 'Generating...' : 'Generate Tags with AI'}
                   </Button>
                 </div>
                 <Input
@@ -708,16 +774,30 @@ export default function DashboardItemsPage() {
 
               {/* Step 4: AI Toggle */}
               <div className="flex items-center gap-3 pt-2 border-t">
-                <input
-                  id="isAI"
-                  type="checkbox"
-                  checked={formIsAIContent}
-                  onChange={(e) => setFormIsAIContent(e.target.checked)}
-                  className="w-4 h-4"
-                />
-                <label htmlFor="isAI" className="text-sm text-gray-700 cursor-pointer">
-                  Mark as AI Generated Content
-                </label>
+                 <input
+                   id="isAI"
+                   type="checkbox"
+                   checked={formIsAIContent}
+                    onChange={(e) => {
+                      const checked = e.target.checked;
+                      setFormIsAIContent(checked);
+
+                      if (checked && formCategory) {
+                        // Auto-generate good AI tags (5) if user hasn't typed any
+                        if (!formTags.trim()) {
+                          generateItemContent('tags');
+                        }
+                        // Also auto-fill description if empty (great UX for Add Item)
+                        if (!formDescription.trim()) {
+                          generateItemContent('description');
+                        }
+                      }
+                    }}
+                   className="w-4 h-4"
+                 />
+                 <label htmlFor="isAI" className="text-sm text-gray-700 cursor-pointer">
+                   Mark as AI Generated Content (auto-generates tags too)
+                 </label>
               </div>
 
               {/* Images - Only for Add */}
