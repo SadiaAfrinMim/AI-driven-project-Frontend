@@ -1,3 +1,5 @@
+import Cookies from 'js-cookie';
+
 export function getApiBaseUrl() {
   if (process.env.NEXT_PUBLIC_API_BASE_URL) {
     return process.env.NEXT_PUBLIC_API_BASE_URL;
@@ -46,7 +48,7 @@ export const api = {
 };
 
 export async function fetchApi(url: string, options: RequestInit = {}) {
-  const token = typeof window !== 'undefined' ? document.cookie.split('; ').find(row => row.startsWith('accessToken='))?.split('=')[1] : null;
+  const token = typeof window !== 'undefined' ? Cookies.get('accessToken') : null;
   
   const isFormData = options.body instanceof FormData;
   const headers: HeadersInit = {

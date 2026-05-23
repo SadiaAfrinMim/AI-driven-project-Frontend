@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
+import Cookies from 'js-cookie';
 import {
   Users,
   Package,
@@ -37,19 +38,31 @@ const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: Settings },
   { name: 'Recommendations', href: '/recommendations', icon: Sparkles },
   { name: 'Profile', href: '/dashboard/profile', icon: Users },
-  { name: 'Items', href: '/dashboard/items', icon: Package },
+  { name: 'Items', href: '/dashboard/items', icon: Package, roles: ['ADMIN', 'MANAGER'] },
   { name: 'Reviews', href: '/dashboard/reviews', icon: MessageSquare },
   { name: 'AI Assistant', href: '/ai', icon: Bot },
   { name: 'Analytics', href: '/dashboard/analytics', icon: BarChart3, roles: ['ADMIN', 'MANAGER'] },
-  { name: 'Manage Users', href: '/dashboard/users', icon: Users, roles: ['ADMIN', 'MANAGER'] },
+  { name: 'Manage Users', href: '/dashboard/users', icon: Users, roles: ['ADMIN'] },
 ];
 
 export function Sidebar({ user, onLogout }: SidebarProps) {
   const [isOpen, setIsOpen] = useState(false);
   const pathname = usePathname();
 
+  // Read the absolute latest user (with newest Cloudinary profile photo) directly from cookie
+  // so Sidebar avatar + role-based menu items are always up-to-date.
+  const getFreshUser = () => {
+    try {
+      const raw = Cookies.get('user');
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  };
+  const freshUser = getFreshUser() || user;
+
   const filteredNavigation = navigation.filter(
-    item => !item.roles || item.roles.includes(user.role)
+    item => !item.roles || item.roles.includes(freshUser.role)
   );
 
   return (
@@ -95,26 +108,26 @@ export function Sidebar({ user, onLogout }: SidebarProps) {
           {/* User Profile Section */}
           <div className="px-4 py-5 bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200/50">
             <div className="flex items-center space-x-3">
-              {user.profileImage ? (
+              {freshUser.profileImage ? (
                 <img
-                  src={user.profileImage}
-                  alt={user.name}
+                  src={freshUser.profileImage}
+                  alt={freshUser.name}
                   className="h-10 w-10 rounded-xl border-2 border-white shadow-md"
                 />
               ) : (
                 <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 flex items-center justify-center shadow-md">
                   <span className="text-white font-bold text-sm">
-                    {user.name.charAt(0).toUpperCase()}
+                    {freshUser.name.charAt(0).toUpperCase()}
                   </span>
                 </div>
               )}
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-gray-900 truncate">
-                  {user.name}
+                  {freshUser.name}
                 </p>
-                <p className="text-xs text-gray-600 truncate mb-1">{user.email}</p>
+                <p className="text-xs text-gray-600 truncate mb-1">{freshUser.email}</p>
                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">
-                  {user.role}
+                  {freshUser.role}
                 </span>
               </div>
             </div>

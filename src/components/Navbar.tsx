@@ -5,7 +5,6 @@ import { useRouter, usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { Bot, LogOut, Settings, Menu, User, BarChart3, Shield } from 'lucide-react';
-import { ThemeToggle } from '@/components/theme-toggle';
 import { useState, useEffect } from 'react';
 import Cookies from 'js-cookie';
 
@@ -20,8 +19,7 @@ export function Navbar() {
   // Style navbar differently on dashboard pages
   const isDashboard = pathname.startsWith('/dashboard');
 
-  // Check authentication on client side only to avoid hydration mismatch
-  useEffect(() => {
+  const loadUserFromCookie = () => {
     const accessToken = Cookies.get('accessToken');
     const userData = Cookies.get('user');
 
@@ -36,6 +34,20 @@ export function Navbar() {
       setIsAuthenticated(false);
       setUser(null);
     }
+  };
+
+  // Check authentication on client side only to avoid hydration mismatch
+  // Also listen for profile image updates from /dashboard/profile so navbar avatar updates live
+  useEffect(() => {
+    loadUserFromCookie();
+
+    const handleProfileUpdate = () => {
+      console.log('🔄 [NAVBAR] userProfileUpdated event received - refreshing user image from cookie');
+      loadUserFromCookie();
+    };
+
+    window.addEventListener('userProfileUpdated', handleProfileUpdate);
+    return () => window.removeEventListener('userProfileUpdated', handleProfileUpdate);
   }, []);
 
   const handleLogout = () => {
@@ -47,6 +59,19 @@ export function Navbar() {
   };
 
 
+
+  // Always derive the freshest user from cookie so that a newly uploaded Cloudinary profile photo
+  // (saved by /dashboard/profile) immediately appears in the navbar avatar without waiting for any state sync.
+  const getFreshUser = () => {
+    try {
+      const raw = Cookies.get('user');
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  };
+
+  const freshUser = getFreshUser() || user;
 
   return (
     <nav suppressHydrationWarning className={`sticky top-0 z-50 transition-all duration-300 ${
@@ -109,7 +134,7 @@ export function Navbar() {
                   AI Assistant
                 </Link>
 
-                {(user?.role === 'ADMIN' || user?.role === 'MANAGER') && (
+                {(freshUser?.role === 'ADMIN' || freshUser?.role === 'MANAGER') && (
                   <Link
                     href="/dashboard/analytics"
                     className="text-foreground/70 hover:text-primary px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 hover:bg-primary/10"
@@ -148,28 +173,27 @@ export function Navbar() {
             )}
           </div>
 
-          {/* Right side actions */}
-          <div className="flex items-center space-x-2">
-            <ThemeToggle />
-
-            {isAuthenticated && user ? (
+           {/* Right side actions */}
+           <div className="flex items-center space-x-2">
+             {freshUser ? (
               <div className="relative">
                 <button
                   onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
                   className="flex items-center gap-3 rounded-full pl-1.5 pr-4 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all active:scale-[0.985]"
                 >
-                  {user.profileImage ? (
-                    <img src={user.profileImage} alt={user.name} className="h-9 w-9 rounded-full ring-2 ring-blue-100 dark:ring-blue-900" />
+                  {freshUser.profileImage ? (
+                    <img src={freshUser.profileImage} alt={freshUser.name} className="h-9 w-9 rounded-full ring-2 ring-blue-100 dark:ring-blue-900" />
                   ) : (
                     <div className="h-9 w-9 rounded-full bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 flex items-center justify-center ring-2 ring-blue-100 dark:ring-blue-900">
-                      <span className="text-white font-bold text-sm tracking-tight">{user.name.charAt(0).toUpperCase()}</span>
+                      <span className="text-white font-bold text-sm tracking-tight">{freshUser.name.charAt(0).toUpperCase()}</span>
                     </div>
                   )}
                   <div className="hidden md:block text-left">
-                    <p className="text-sm font-semibold text-foreground tracking-tight">{user.name.split(' ')[0]}</p>
-                    <p className="text-[10px] text-muted-foreground -mt-0.5">{user.role}</p>
+                    <p className="text-sm font-semibold text-foreground tracking-tight">{freshUser.name.split(' ')[0]}</p>
+                    <p className="text-[10px] text-muted-foreground -mt-0.5">{freshUser.role}</p>
                   </div>
                 </button>
+
 
                 {/* Professional Dropdown Menu - Stable Version */}
                 {isProfileDropdownOpen && (
@@ -178,11 +202,11 @@ export function Navbar() {
                     onClick={(e) => e.stopPropagation()}
                   >
                     <div className="px-4 py-3 border-b">
-                      <p className="font-semibold text-sm">{user.name}</p>
-                      <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                      <p className="font-semibold text-sm">{freshUser.name}</p>
+                      <p className="text-xs text-muted-foreground truncate">{freshUser.email}</p>
                       <div className="mt-1.5">
                         <span className="inline-block px-2 py-0.5 text-[10px] font-medium rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">
-                          {user.role}
+                          {freshUser.role}
                         </span>
                       </div>
                     </div>
@@ -195,13 +219,13 @@ export function Navbar() {
                         <Settings className="w-4 h-4 text-muted-foreground" /> Dashboard
                       </Link>
 
-                      {(user.role === 'ADMIN' || user.role === 'MANAGER') && (
+                      {(freshUser.role === 'ADMIN' || freshUser.role === 'MANAGER') && (
                         <Link href="/dashboard/analytics" className="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors" onClick={() => setIsProfileDropdownOpen(false)}>
                           <BarChart3 className="w-4 h-4 text-muted-foreground" /> Analytics
                         </Link>
                       )}
 
-                      {user.role === 'ADMIN' && (
+                      {freshUser.role === 'ADMIN' && (
                         <Link href="/dashboard/users" className="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors" onClick={() => setIsProfileDropdownOpen(false)}>
                           <Shield className="w-4 h-4 text-muted-foreground" /> Manage Users
                         </Link>
@@ -271,13 +295,15 @@ export function Navbar() {
                 >
                   Recommendations
                 </Link>
-                <Link
-                  href="/dashboard/items"
-                  className="block px-3 py-2 text-base font-medium text-foreground/70 hover:text-primary"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  Products
-                </Link>
+                {(freshUser?.role === 'ADMIN' || freshUser?.role === 'MANAGER') && (
+                  <Link
+                    href="/dashboard/items"
+                    className="block px-3 py-2 text-base font-medium text-foreground/70 hover:text-primary"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    Products
+                  </Link>
+                )}
                 <Link
                   href="/about"
                   className="block px-3 py-2 text-base font-medium text-foreground/70 hover:text-primary"

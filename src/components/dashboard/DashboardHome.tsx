@@ -303,22 +303,24 @@ export default function DashboardHome() {
           <Zap className="w-6 h-6 text-yellow-500" /> Quick Actions
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <Link href="/dashboard/items">
-            <Card className="border-2 border-blue-200 hover:border-blue-400 hover:shadow-xl transition-all duration-300 cursor-pointer group h-full">
-              <CardContent className="p-6 flex flex-col h-full">
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="p-4 bg-blue-100 rounded-2xl group-hover:bg-blue-200 transition-colors">
-                    <Package className="w-8 h-8 text-blue-600" />
+          {(user?.role === 'ADMIN' || user?.role === 'MANAGER') && (
+            <Link href="/dashboard/items">
+              <Card className="border-2 border-blue-200 hover:border-blue-400 hover:shadow-xl transition-all duration-300 cursor-pointer group h-full">
+                <CardContent className="p-6 flex flex-col h-full">
+                  <div className="flex items-center gap-4 mb-4">
+                    <div className="p-4 bg-blue-100 rounded-2xl group-hover:bg-blue-200 transition-colors">
+                      <Package className="w-8 h-8 text-blue-600" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-lg">Browse Products</h3>
+                      <p className="text-sm text-gray-600">Discover amazing items</p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="font-bold text-lg">Browse Products</h3>
-                    <p className="text-sm text-gray-600">Discover amazing items</p>
-                  </div>
-                </div>
-                <Button className="mt-auto w-full bg-blue-600 hover:bg-blue-700">Explore Now</Button>
-              </CardContent>
-            </Card>
-          </Link>
+                  <Button className="mt-auto w-full bg-blue-600 hover:bg-blue-700">Explore Now</Button>
+                </CardContent>
+              </Card>
+            </Link>
+          )}
 
           <Link href="/ai">
             <Card className="border-2 border-purple-200 hover:border-purple-400 hover:shadow-xl transition-all duration-300 cursor-pointer group h-full">
@@ -407,18 +409,20 @@ export default function DashboardHome() {
           </CardContent>
         </Card>
 
-        <Link href="/dashboard/items">
-          <Card className="border-l-4 border-l-orange-500 shadow-lg hover:shadow-xl transition-shadow cursor-pointer hover:border-orange-600">
-            <CardContent className="p-6">
-              <div className="flex justify-between items-start mb-4">
-                <AlertTriangle className="w-8 h-8 text-orange-500" />
-                <Badge className="bg-orange-100 text-orange-700">Pending</Badge>
-              </div>
-              <div className="text-4xl font-bold text-orange-600 mb-1">{stats.pendingItems || 0}</div>
-              <p className="text-sm text-gray-600">Awaiting Approval</p>
-            </CardContent>
-          </Card>
-        </Link>
+        {(user?.role === 'ADMIN' || user?.role === 'MANAGER') && (
+          <Link href="/dashboard/items">
+            <Card className="border-l-4 border-l-orange-500 shadow-lg hover:shadow-xl transition-shadow cursor-pointer hover:border-orange-600">
+              <CardContent className="p-6">
+                <div className="flex justify-between items-start mb-4">
+                  <AlertTriangle className="w-8 h-8 text-orange-500" />
+                  <Badge className="bg-orange-100 text-orange-700">Pending</Badge>
+                </div>
+                <div className="text-4xl font-bold text-orange-600 mb-1">{stats.pendingItems || 0}</div>
+                <p className="text-sm text-gray-600">Awaiting Approval</p>
+              </CardContent>
+            </Card>
+          </Link>
+        )}
 
         <Card className="border-l-4 border-l-green-500 shadow-lg hover:shadow-xl transition-shadow">
           <CardContent className="p-6">
@@ -578,11 +582,11 @@ export default function DashboardHome() {
                 <Button className="w-full bg-purple-600 hover:bg-purple-700">View Analytics</Button>
               </CardContent>
             </Card>
-          </Link>
+            </Link>
+          </div>
         </div>
       </div>
-    </div>
-  );
+    );
 
   // ==================== ADMIN DASHBOARD ====================
   const renderAdminDashboard = () => (

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { User, Mail, Calendar, Award, Save, Edit2, MessageSquare, Star } from 'lucide-react';
+import { User, Mail, Calendar, Award, Save, Edit2, MessageSquare, Star, Upload, Image } from 'lucide-react';
 import { toast } from 'sonner';
 import Cookies from 'js-cookie';
 import { fetchApi, api } from '@/lib/api';
@@ -28,6 +28,10 @@ export default function ProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [myReviews, setMyReviews] = useState<any[]>([]);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [pendingImageFile, setPendingImageFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     bio: '',
@@ -35,22 +39,53 @@ export default function ProfilePage() {
   });
 
   useEffect(() => {
-    const loadUser = () => {
-      const userData = Cookies.get('user');
-      if (userData) {
-        try {
-          const parsedUser = JSON.parse(userData);
-          setUser(parsedUser);
+    const loadUser = async () => {
+      try {
+        // Always fetch fresh profile from server so latest profileImage (after Cloudinary upload) is loaded
+        const res = await fetchApi(`${api.users}/profile`);
+        const freshUser = res?.data;
+        if (freshUser) {
+          Cookies.set('user', JSON.stringify(freshUser), { expires: 7 });
+          setUser(freshUser);
           setFormData({
-            name: parsedUser.name || '',
-            bio: parsedUser.bio || '',
-            profileImage: parsedUser.profileImage || '',
+            name: freshUser.name || '',
+            bio: freshUser.bio || '',
+            profileImage: freshUser.profileImage || '',
           });
-        } catch (error) {
-          console.error('Failed to parse user data');
+          console.log('✅ [PROFILE] Loaded fresh user profile (image):', freshUser.profileImage);
+        } else {
+          // fallback to cookie
+          const userData = Cookies.get('user');
+          if (userData) {
+            const parsedUser = JSON.parse(userData);
+            setUser(parsedUser);
+            setFormData({
+              name: parsedUser.name || '',
+              bio: parsedUser.bio || '',
+              profileImage: parsedUser.profileImage || '',
+            });
+          }
         }
+      } catch (error) {
+        console.warn('Could not fetch fresh profile, using cookie fallback');
+        // fallback to cookie
+        const userData = Cookies.get('user');
+        if (userData) {
+          try {
+            const parsedUser = JSON.parse(userData);
+            setUser(parsedUser);
+            setFormData({
+              name: parsedUser.name || '',
+              bio: parsedUser.bio || '',
+              profileImage: parsedUser.profileImage || '',
+            });
+          } catch (e) {
+            console.error('Failed to parse user data from cookie');
+          }
+        }
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     loadUser();
@@ -66,24 +101,81 @@ export default function ProfilePage() {
     }
   };
 
-  const handleSave = () => {
+  // Helper: convert selected file to base64 data URL (sent inside the normal profile PATCH)
+  const fileToBase64 = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+  const handleSave = async () => {
     if (!user) return;
 
-    const updatedUser = {
-      ...user,
-      name: formData.name,
-      bio: formData.bio,
-      profileImage: formData.profileImage,
-    };
+    try {
+      setUploadingImage(true);
 
-    // Update cookie
-    Cookies.set('user', JSON.stringify(updatedUser), { expires: 7 });
+      let imagePayload = formData.profileImage;
+      const hadNewPhoto = !!pendingImageFile;
 
-    // Update local state
-    setUser(updatedUser);
-    setIsEditing(false);
+      // If a new photo was chosen, convert it to base64.
+      // Backend will detect the data: URL, upload to Cloudinary, and save the final URL.
+      if (pendingImageFile) {
+        console.log('📸 [FRONTEND] New profile photo selected — converting to base64 for Cloudinary upload...');
+        imagePayload = await fileToBase64(pendingImageFile);
+        console.log('📦 [FRONTEND] Base64 ready (length:', imagePayload.length, 'chars) — sending inside PATCH /profile');
+      }
 
-    toast.success('Profile updated successfully!');
+      // Single API call - the normal profile update (no extra upload-image fetch)
+      console.log('🚀 [FRONTEND] Saving profile (with possible image) to backend...');
+      const res = await fetchApi(`${api.users}/profile`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          name: formData.name,
+          bio: formData.bio,
+          profileImage: imagePayload,
+        }),
+      });
+
+      const saved = res?.data;
+      const updatedUser = saved || {
+        ...user,
+        name: formData.name,
+        bio: formData.bio,
+        profileImage: imagePayload,
+      };
+
+      console.log('✅ [FRONTEND] Profile saved! Final image URL from backend (Cloudinary):', updatedUser.profileImage);
+
+      Cookies.set('user', JSON.stringify(updatedUser), { expires: 7 });
+      setUser(updatedUser);
+
+      // cleanup local preview
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+      setPendingImageFile(null);
+      setPreviewUrl(null);
+      setIsEditing(false);
+
+      // Notify Navbar, Sidebar, DashboardLayout etc. to refresh their user state from updated cookie
+      window.dispatchEvent(new CustomEvent('userProfileUpdated'));
+
+      toast.success(hadNewPhoto 
+        ? 'Profile + Photo uploaded to Cloudinary successfully!' 
+        : 'Profile updated successfully!');
+
+      if (hadNewPhoto && updatedUser.profileImage) {
+        console.log('%c[VERIFY] Open this Cloudinary URL in new tab to confirm upload:', 'color: green', updatedUser.profileImage);
+      }
+    } catch (error: any) {
+      console.error('Failed to save profile - full error:', error);
+      const msg = error?.message || 'Failed to save profile';
+      toast.error(msg, { duration: 6000 });
+    } finally {
+      setUploadingImage(false);
+    }
   };
 
   const handleCancel = () => {
@@ -94,7 +186,54 @@ export default function ProfilePage() {
         profileImage: user.profileImage || '',
       });
     }
+
+    // Cleanup pending image and preview
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+    }
+    setPendingImageFile(null);
+    setPreviewUrl(null);
     setIsEditing(false);
+  };
+
+  const handleProfileImageUpload = (file: File) => {
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image size must be less than 5MB');
+      return;
+    }
+
+    // Store file locally. On Save we will convert to base64 and send inside the single profile PATCH call.
+    setPendingImageFile(file);
+
+    // Local preview only (no API call)
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+    }
+    const newPreview = URL.createObjectURL(file);
+    setPreviewUrl(newPreview);
+
+    // We keep formData.profileImage empty until save (backend will return final Cloudinary URL)
+    setFormData(prev => ({ ...prev, profileImage: '' }));
+  };
+
+  const triggerImageUpload = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      handleProfileImageUpload(file);
+    }
+    // Reset the input so the same file can be selected again if needed
+    e.target.value = '';
   };
 
   if (loading) {
@@ -124,9 +263,18 @@ export default function ProfilePage() {
         ) : (
           <div className="flex gap-2">
             <Button variant="outline" onClick={handleCancel}>Cancel</Button>
-            <Button onClick={handleSave} className="gap-2">
-              <Save className="w-4 h-4" /> Save Changes
-            </Button>
+            <Button onClick={handleSave} disabled={uploadingImage} className="gap-2">
+               {uploadingImage ? (
+                 <>
+                   <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                   Uploading to Cloudinary...
+                 </>
+               ) : (
+                 <>
+                   <Save className="w-4 h-4" /> Save Changes
+                 </>
+               )}
+             </Button>
           </div>
         )}
       </div>
@@ -136,21 +284,66 @@ export default function ProfilePage() {
         <Card className="lg:col-span-1">
           <CardContent className="pt-6">
             <div className="flex flex-col items-center text-center">
-              <Avatar className="w-24 h-24 mb-4">
-                <AvatarImage src={user.profileImage} />
-                <AvatarFallback className="text-2xl">
-                  {user.name?.charAt(0).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
+               <Avatar 
+                 className={`w-24 h-24 mb-4 relative ${isEditing ? 'cursor-pointer' : ''} ${uploadingImage ? 'opacity-50' : ''}`}
+                 onClick={() => {
+                   if (isEditing && !uploadingImage) {
+                     triggerImageUpload();
+                   }
+                 }}
+               >
+                   <AvatarImage key={previewUrl || user.profileImage} src={previewUrl || user.profileImage} />
+        <AvatarFallback className="text-2xl">
+          {user.name && user.name.length > 0 ? user.name.charAt(0).toUpperCase() : 'U'}
+        </AvatarFallback>
+                 {isEditing && (
+                   <div className="absolute bottom-0 right-0 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs z-10">
+                     {uploadingImage ? (
+                       <div className="animate-spin rounded-full h-3 w-3 border-2 border-white border-t-transparent" />
+                     ) : (
+                       <Upload className="w-3 h-3" />
+                     )}
+                   </div>
+                 )}
+                </Avatar>
 
-              <h2 className="text-2xl font-bold">{user.name}</h2>
+                {/* Hidden file input for profile image upload */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleFileSelect}
+                />
+ 
+               <h2 className="text-2xl font-bold">{user.name}</h2>
               <p className="text-gray-600">{user.email}</p>
 
-              <Badge className="mt-3" variant={user.role === 'ADMIN' ? 'destructive' : 'default'}>
-                {user.role}
-              </Badge>
+               <Badge className="mt-3" variant={user.role === 'ADMIN' ? 'destructive' : 'default'}>
+                 {user.role}
+               </Badge>
 
-              <div className="mt-6 pt-6 border-t w-full">
+               {/* Visual proof that the photo is hosted on Cloudinary */}
+               {user.profileImage && user.profileImage.includes('cloudinary.com') && (
+                 <div className="mt-2 flex flex-col items-center gap-1">
+                   <div className="flex items-center justify-center gap-2 text-xs text-green-600 bg-green-50 px-3 py-1 rounded-full">
+                     <span>☁️ Hosted on Cloudinary</span>
+                     <a 
+                       href={user.profileImage} 
+                       target="_blank" 
+                       rel="noopener noreferrer"
+                       className="underline font-medium hover:text-green-700"
+                     >
+                       View photo
+                     </a>
+                   </div>
+                   <div className="text-[10px] text-gray-400 font-mono break-all max-w-[180px] text-center">
+                     {user.profileImage}
+                   </div>
+                 </div>
+               )}
+
+               <div className="mt-6 pt-6 border-t w-full">
                 <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
                   <Calendar className="w-4 h-4" />
                   <span>Joined {new Date(user.createdAt || Date.now()).toLocaleDateString()}</span>
@@ -211,78 +404,35 @@ export default function ProfilePage() {
 
             {isEditing && (
               <div className="space-y-2">
-                <Label htmlFor="profileImage">Profile Image URL</Label>
-                <Input
-                  id="profileImage"
-                  value={formData.profileImage}
-                  onChange={(e) => setFormData({ ...formData, profileImage: e.target.value })}
-                  placeholder="https://example.com/your-photo.jpg"
-                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={triggerImageUpload}
+                  disabled={uploadingImage}
+                  className="gap-2 w-full"
+                >
+                  {uploadingImage ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-400 border-t-transparent" />
+                      Saving Photo...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-4 h-4" />
+                      Change Profile Photo
+                    </>
+                  )}
+                </Button>
+                <p className="text-xs text-gray-500 text-center">
+                  Select a photo here or click the avatar. It will be uploaded to Cloudinary when you click Save Changes.
+                </p>
               </div>
             )}
           </CardContent>
         </Card>
       </div>
 
-      {/* Account Stats */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Award className="w-5 w-5" /> Account Statistics
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="text-center p-4 bg-blue-50 rounded-xl">
-              <div className="text-3xl font-bold text-blue-600">12</div>
-              <div className="text-sm text-gray-600 mt-1">Products Listed</div>
-            </div>
-            <div className="text-center p-4 bg-green-50 rounded-xl">
-              <div className="text-3xl font-bold text-green-600">{myReviews.length}</div>
-              <div className="text-sm text-gray-600 mt-1">Reviews Written</div>
-            </div>
-            <div className="text-center p-4 bg-purple-50 rounded-xl">
-              <div className="text-3xl font-bold text-purple-600">156</div>
-              <div className="text-sm text-gray-600 mt-1">AI Interactions</div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* My Reviews Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <MessageSquare className="w-5 w-5" /> My Reviews
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {myReviews.length > 0 ? (
-            <div className="space-y-4">
-              {myReviews.slice(0, 5).map((review: any, index: number) => (
-                <div key={index} className="p-4 border rounded-xl bg-gray-50 dark:bg-slate-800">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="font-medium">{review.item?.title || 'Product'}</div>
-                    <div className="flex items-center text-yellow-500">
-                      {Array.from({ length: 5 }).map((_, i) => (
-                        <Star key={i} className={`w-4 h-4 ${i < review.rating ? 'fill-current' : ''}`} />
-                      ))}
-                    </div>
-                  </div>
-                  <p className="text-sm text-gray-600 dark:text-gray-300">{review.comment}</p>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    {new Date(review.createdAt).toLocaleDateString()}
-                  </p>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-8 text-muted-foreground">
-              You haven't written any reviews yet.
-            </div>
-          )}
-        </CardContent>
-      </Card>
+   
     </div>
   );
 }

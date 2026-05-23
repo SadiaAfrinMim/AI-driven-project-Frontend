@@ -55,32 +55,32 @@
   --card-foreground: oklch(0.22 0.02 70);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.22 0.02 70);
-  --primary: oklch(0.62 0.17 45);
+  --primary: oklch(0.7 0.15 250); /* Sky Blue */
   --primary-foreground: oklch(0.985 0.01 95);
-  --secondary: oklch(0.7 0.11 180);
-  --secondary-foreground: oklch(0.18 0.02 180);
+  --secondary: oklch(0.75 0.12 250); /* Lighter Sky Blue */
+  --secondary-foreground: oklch(0.22 0.02 70);
   --muted: oklch(0.95 0.02 90);
   --muted-foreground: oklch(0.48 0.03 75);
-  --accent: oklch(0.78 0.12 135);
-  --accent-foreground: oklch(0.18 0.02 135);
-  --destructive: oklch(0.6 0.22 20);
+  --accent: oklch(0.65 0.18 250); /* Deeper Sky Blue */
+  --accent-foreground: oklch(0.985 0.01 95);
+  --destructive: oklch(0.7 0.15 250); /* Sky Blue (using instead of red) */
   --border: oklch(0.9 0.02 85);
   --input: oklch(0.95 0.02 90);
-  --ring: oklch(0.62 0.17 45);
-  --chart-1: oklch(0.62 0.17 45);
-  --chart-2: oklch(0.7 0.11 180);
-  --chart-3: oklch(0.78 0.12 135);
-  --chart-4: oklch(0.73 0.14 70);
-  --chart-5: oklch(0.6 0.22 20); /* Red */
+  --ring: oklch(0.7 0.15 250);
+  --chart-1: oklch(0.7 0.15 250); /* Sky Blue */
+  --chart-2: oklch(0.75 0.12 250); /* Lighter Sky Blue */
+  --chart-3: oklch(0.65 0.18 250); /* Deeper Sky Blue */
+  --chart-4: oklch(0.68 0.16 250); /* Sky Blue Variant */
+  --chart-5: oklch(0.72 0.13 250); /* Sky Blue Variant */
   --radius: 0.625rem;
   --sidebar: oklch(0.98 0.01 95);
   --sidebar-foreground: oklch(0.22 0.02 70);
-  --sidebar-primary: oklch(0.62 0.17 45);
+  --sidebar-primary: oklch(0.7 0.15 250);
   --sidebar-primary-foreground: oklch(0.985 0.01 95);
   --sidebar-accent: oklch(0.95 0.02 90);
   --sidebar-accent-foreground: oklch(0.22 0.02 70);
   --sidebar-border: oklch(0.9 0.02 85);
-  --sidebar-ring: oklch(0.62 0.17 45);
+  --sidebar-ring: oklch(0.7 0.15 250);
 }
 
 .dark {
@@ -90,31 +90,31 @@
   --card-foreground: oklch(0.95 0.01 240);
   --popover: oklch(0.12 0.02 240);
   --popover-foreground: oklch(0.95 0.01 240);
-  --primary: oklch(0.65 0.25 250); /* Blue - brighter in dark */
+  --primary: oklch(0.7 0.15 250); /* Sky Blue */
   --primary-foreground: oklch(0.08 0.01 240);
-  --secondary: oklch(0.7 0.2 160); /* Green - brighter in dark */
+  --secondary: oklch(0.75 0.12 250); /* Lighter Sky Blue */
   --secondary-foreground: oklch(0.08 0.01 240);
   --muted: oklch(0.2 0.02 240);
   --muted-foreground: oklch(0.65 0.05 240);
-  --accent: oklch(0.75 0.22 300); /* Purple - brighter in dark */
+  --accent: oklch(0.65 0.18 250); /* Deeper Sky Blue */
   --accent-foreground: oklch(0.08 0.01 240);
-  --destructive: oklch(0.65 0.25 20);
+  --destructive: oklch(0.7 0.15 250); /* Sky Blue (using instead of red) */
   --border: oklch(0.25 0.02 240);
   --input: oklch(0.18 0.02 240);
-  --ring: oklch(0.65 0.25 250);
-  --chart-1: oklch(0.65 0.25 250); /* Blue */
-  --chart-2: oklch(0.7 0.2 160); /* Green */
-  --chart-3: oklch(0.75 0.22 300); /* Purple */
-  --chart-4: oklch(0.8 0.15 60); /* Orange */
-  --chart-5: oklch(0.65 0.25 20); /* Red */
+  --ring: oklch(0.7 0.15 250);
+  --chart-1: oklch(0.7 0.15 250); /* Sky Blue */
+  --chart-2: oklch(0.75 0.12 250); /* Lighter Sky Blue */
+  --chart-3: oklch(0.65 0.18 250); /* Deeper Sky Blue */
+  --chart-4: oklch(0.68 0.16 250); /* Sky Blue Variant */
+  --chart-5: oklch(0.72 0.13 250); /* Sky Blue Variant */
   --sidebar: oklch(0.1 0.02 240);
   --sidebar-foreground: oklch(0.95 0.01 240);
-  --sidebar-primary: oklch(0.65 0.25 250);
+  --sidebar-primary: oklch(0.7 0.15 250);
   --sidebar-primary-foreground: oklch(0.08 0.01 240);
   --sidebar-accent: oklch(0.2 0.02 240);
   --sidebar-accent-foreground: oklch(0.95 0.01 240);
   --sidebar-border: oklch(0.25 0.02 240);
-  --sidebar-ring: oklch(0.65 0.25 250);
+  --sidebar-ring: oklch(0.7 0.15 250);
 }
 
 @layer base {

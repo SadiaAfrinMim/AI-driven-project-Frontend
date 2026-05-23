@@ -101,7 +101,7 @@ export default function ItemDetailsPage() {
                     {[1, 2, 3, 4, 5].map((index) => (
                       <Star
                         key={index}
-                        className={`w-4 h-4 ${index <= item.rating ? 'text-yellow-400' : 'text-gray-300'}`}
+                        className={`w-4 h-4 ${index <= (item.rating || 0) ? 'text-yellow-400' : 'text-gray-300'}`}
                       />
                     ))}
                   </div>

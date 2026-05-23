@@ -26,7 +26,7 @@ interface GeneratedProduct {
 
 export default function AISellerStudio() {
   // Product Generator State
-  const [category, setCategory] = useState('Electronics');
+  const [category, setCategory] = useState<string | null>('Electronics');
   const [idea, setIdea] = useState('');
   const [price, setPrice] = useState('');
   const [generated, setGenerated] = useState<GeneratedProduct | null>(null);

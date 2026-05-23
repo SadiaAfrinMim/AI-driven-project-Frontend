@@ -25,8 +25,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
-  useEffect(() => {
-    // Check if user is authenticated
+  const loadUserFromCookie = () => {
     const accessToken = Cookies.get('accessToken');
     const userData = Cookies.get('user');
 
@@ -44,6 +43,20 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  useEffect(() => {
+    // Check if user is authenticated
+    loadUserFromCookie();
+
+    // Listen for live profile updates (e.g. new Cloudinary profile photo) so Sidebar + header reflect it immediately
+    const handleProfileUpdate = () => {
+      console.log('🔄 [DASHBOARD LAYOUT] userProfileUpdated event - reloading user for Sidebar image');
+      loadUserFromCookie();
+    };
+
+    window.addEventListener('userProfileUpdated', handleProfileUpdate);
+    return () => window.removeEventListener('userProfileUpdated', handleProfileUpdate);
   }, [router]);
 
   const handleLogout = () => {
