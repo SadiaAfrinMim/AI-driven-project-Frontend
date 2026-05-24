@@ -74,9 +74,7 @@ export default function DashboardItemsPage() {
   const [isGeneratingAll, setIsGeneratingAll] = useState(false);
   const [generationMode, setGenerationMode] = useState<'ai' | 'manual'>('ai');
 
-  // Pending Approvals (Admin only)
-  const [pendingItems, setPendingItems] = useState<any[]>([]);
-  const [loadingPending, setLoadingPending] = useState(false);
+  // (removed unused pending approvals state - approvals are handled on dedicated /dashboard/approvals page)
 
   // New: make description optional when auto-generated
   const [autoGenDescription, setAutoGenDescription] = useState(false);
@@ -84,20 +82,8 @@ export default function DashboardItemsPage() {
   const fetchItems = async () => {
     setLoading(true);
     try {
-      let endpoint = api.items;
-      let query = '';
-
-      if (isAdmin) {
-        // Admins use this page mainly to approve pending items
-        endpoint = api.items;
-        query = '?status=PENDING';
-      } else {
-        // Regular users & managers see their own items (all statuses: pending + approved)
-        endpoint = `${api.items}/my-items`;
-        query = '';
-      }
-
-      const data = await fetchApi(`${endpoint}${query}`);
+      // Everyone (USER, MANAGER, ADMIN) sees only their own created items
+      const data = await fetchApi(`${api.items}/my-items`);
       const list = data?.data?.items || data?.items || [];
       setItems(Array.isArray(list) ? list : []);
     } catch (e) {
@@ -110,44 +96,7 @@ export default function DashboardItemsPage() {
 
   useEffect(() => {
     void fetchItems();
-    if (isAdmin) {
-      fetchPendingItems();
-    }
-  }, [isManager]);
-
-  const fetchPendingItems = async () => {
-    setLoadingPending(true);
-    try {
-      const res = await fetchApi(api.pendingItems);
-      setPendingItems(res?.data || []);
-    } catch (e) {
-      console.error('Failed to fetch pending items');
-    } finally {
-      setLoadingPending(false);
-    }
-  };
-
-  const handleApprove = async (id: string) => {
-    try {
-      await fetchApi(api.approveItem(id), { method: 'PATCH' });
-      toast.success('Item approved!');
-      fetchPendingItems();
-      fetchItems();
-    } catch {
-      toast.error('Failed to approve');
-    }
-  };
-
-  const handleReject = async (id: string) => {
-    try {
-      await fetchApi(api.rejectItem(id), { method: 'PATCH' });
-      toast.success('Item rejected');
-      fetchPendingItems();
-      fetchItems();
-    } catch {
-      toast.error('Failed to reject');
-    }
-  };
+  }, []); // fetch once on mount (role is stable during page lifetime)
 
   const handleDeleteItem = async (itemId: string) => {
     try {
@@ -389,8 +338,6 @@ export default function DashboardItemsPage() {
           <Plus className="w-4 h-4 mr-2" />
           Add Item
         </Button>
-      {/* Admin sees only pending items in main list with Approve/Reject buttons */}
-
       {/* Search */}
       <Card className="bg-white/70 backdrop-blur">
         <CardContent className="pt-6">
@@ -555,26 +502,6 @@ export default function DashboardItemsPage() {
                             <Trash2 className="w-3 h-3 mr-1" />
                             Delete
                           </Button>
-                        )}
-
-                        {isAdmin && (
-                          <>
-                            <Button
-                              size="sm"
-                              className="h-7 text-xs bg-green-600 hover:bg-green-700 px-2.5"
-                              onClick={() => handleApprove(item.id)}
-                            >
-                              Approve
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="destructive"
-                              className="h-7 text-xs px-2.5"
-                              onClick={() => handleReject(item.id)}
-                            >
-                              Reject
-                            </Button>
-                          </>
                         )}
                       </>
                     ) : (

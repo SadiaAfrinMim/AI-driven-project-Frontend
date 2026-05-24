@@ -38,10 +38,13 @@ const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: Settings },
   { name: 'Recommendations', href: '/recommendations', icon: Sparkles },
   { name: 'Profile', href: '/dashboard/profile', icon: Users },
+  { name: 'My Orders', href: '/dashboard/orders', icon: Package },
   { name: 'Items', href: '/dashboard/items', icon: Package, roles: ['ADMIN', 'MANAGER'] },
   { name: 'Reviews', href: '/dashboard/reviews', icon: MessageSquare },
   { name: 'AI Assistant', href: '/ai', icon: Bot },
   { name: 'Analytics', href: '/dashboard/analytics', icon: BarChart3, roles: ['ADMIN', 'MANAGER'] },
+  { name: 'Item Approvals', href: '/dashboard/approvals', icon: CheckCircle, roles: ['ADMIN'] },
+  { name: 'Product Requests', href: '/dashboard/selection-approvals', icon: CheckCircle, roles: ['ADMIN', 'MANAGER'] },
   { name: 'Manage Users', href: '/dashboard/users', icon: Users, roles: ['ADMIN'] },
 ];
 

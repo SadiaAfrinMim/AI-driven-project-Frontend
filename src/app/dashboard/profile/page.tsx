@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { User, Mail, Calendar, Award, Save, Edit2, MessageSquare, Star, Upload, Image } from 'lucide-react';
+import { User, Mail, Calendar, Award, Save, Edit2, MessageSquare, Star, Upload, Image, Package, MapPin, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import Cookies from 'js-cookie';
 import { fetchApi, api } from '@/lib/api';
@@ -28,6 +29,7 @@ export default function ProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [myReviews, setMyReviews] = useState<any[]>([]);
+  const [mySelections, setMySelections] = useState<any[]>([]);
   const [uploadingImage, setUploadingImage] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [pendingImageFile, setPendingImageFile] = useState<File | null>(null);
@@ -90,6 +92,7 @@ export default function ProfilePage() {
 
     loadUser();
     fetchMyReviews();
+    fetchMySelectionsList();
   }, []);
 
   const fetchMyReviews = async () => {
@@ -98,6 +101,18 @@ export default function ProfilePage() {
       setMyReviews(res?.data?.reviews || []);
     } catch (e) {
       console.error('Failed to fetch reviews');
+    }
+  };
+
+  const fetchMySelectionsList = async () => {
+    try {
+      const res = await fetchApi(api.mySelections);
+      // /my-selections returns { data: { selections: [...] } }
+      const list = res?.data?.selections || res?.data || [];
+      setMySelections(list);
+    } catch (e) {
+      console.error('Failed to fetch my selections');
+      setMySelections([]);
     }
   };
 
@@ -432,6 +447,86 @@ export default function ProfilePage() {
         </Card>
       </div>
 
+      {/* My Selected Items - shows all (PENDING + APPROVED + REJECTED) for the current user */}
+      <div className="mt-8">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+            <CheckCircle className="h-6 w-6 text-sky-600" /> My Selected Items
+          </h2>
+          <Badge variant="secondary" className="text-sm">{mySelections.length} total</Badge>
+        </div>
+
+        {mySelections.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+            {mySelections.map((sel: any) => {
+              const item = sel.item || sel;
+              const status = sel.status || 'PENDING';
+              const statusColor =
+                status === 'APPROVED' ? 'bg-emerald-600' :
+                status === 'REJECTED' ? 'bg-red-600' :
+                'bg-amber-500';
+              const borderColor =
+                status === 'APPROVED' ? 'border-emerald-200' :
+                status === 'REJECTED' ? 'border-red-200' :
+                'border-amber-200';
+
+              return (
+                <Card key={sel.id} className={`group flex flex-col h-full rounded-2xl overflow-hidden hover:shadow-lg transition-all bg-white border ${borderColor}`}>
+                  {/* Image */}
+                  <div className="relative aspect-square bg-slate-100 flex-shrink-0 overflow-hidden">
+                    {item.images?.[0] ? (
+                      <img
+                        src={item.images[0]}
+                        alt={item.title}
+                        className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-300"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-slate-100">
+                        <Package className="h-9 w-9 text-slate-400" />
+                      </div>
+                    )}
+                    <div className="absolute top-2 right-2">
+                      <Badge className={`${statusColor} text-white text-[10px]`}>{status}</Badge>
+                    </div>
+                  </div>
+
+                  {/* Content */}
+                  <CardContent className="p-3 flex flex-col flex-1">
+                    <h3 className="font-semibold text-[13.5px] leading-tight text-gray-900 line-clamp-2 mb-1.5 group-hover:text-sky-600 transition-colors">
+                      {item.title}
+                    </h3>
+
+                    <div className="flex items-center text-xs text-muted-foreground mb-2">
+                      <MapPin className="h-3 w-3 mr-1" /> {item.location}
+                    </div>
+
+                    <div className="flex items-center justify-between mt-auto">
+                      <span className="text-lg font-bold text-sky-600 tracking-tight">
+                        ৳{Number(item.price).toLocaleString()}
+                      </span>
+                      <span className="text-[10px] text-gray-500">Qty: {sel.quantity || 1}</span>
+                    </div>
+
+                    <Link href={`/products/${item.id}`} className="mt-3">
+                      <Button size="sm" className="w-full h-8 text-xs bg-sky-600 hover:bg-sky-700 transition-colors">
+                        View Product
+                      </Button>
+                    </Link>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        ) : (
+          <Card className="border-dashed">
+            <CardContent className="py-10 text-center text-muted-foreground">
+              <Package className="h-10 w-10 mx-auto mb-3 opacity-50" />
+              <p>No selections yet.</p>
+              <p className="text-sm mt-1">Go to any product page and click the sky blue "Select Product (Reserve)" button. It will appear here instantly with status.</p>
+            </CardContent>
+          </Card>
+        )}
+      </div>
    
     </div>
   );

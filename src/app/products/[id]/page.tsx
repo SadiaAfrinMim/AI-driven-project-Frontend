@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -20,11 +20,14 @@ import {
   Package,
   Shield,
   Truck,
-  RotateCcw
+  RotateCcw,
+  ShoppingCart
 } from 'lucide-react';
 import { fetchApi, api } from '@/lib/api';
 import { ReviewForm } from '@/components/ReviewForm';
 import Cookies from 'js-cookie';
+import { toast } from 'sonner';
+import { addToCart } from '@/lib/cart';
 
 interface Product {
   id: string;
@@ -63,6 +66,7 @@ interface Review {
 
 export default function ProductDetailsPage() {
   const params = useParams();
+  const router = useRouter();
   const productId = params.id as string;
 
   const [product, setProduct] = useState<Product | null>(null);
@@ -72,6 +76,15 @@ export default function ProductDetailsPage() {
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(0);
   const [isEditingReview, setIsEditingReview] = useState(false);
+
+  const [isSelecting, setIsSelecting] = useState(false);
+  const [mySelectionsForThis, setMySelectionsForThis] = useState<any[]>([]);
+
+  // Quantity user wants to select in one go
+  const [selectQuantity, setSelectQuantity] = useState(1);
+
+  // Derived count for clean usage
+  const mySelectedCount = mySelectionsForThis.reduce((sum, s) => sum + (s.quantity || 1), 0);
 
 
   // get current user id from cookies
@@ -106,7 +119,9 @@ export default function ProductDetailsPage() {
       const otherReviews = productReviews.filter((r: Review) => r.userId !== currentUserId);
 
       setUserReview(myReview);
-      setReviews(otherReviews);
+
+      // Load user's own selections for this product (so they can see "koyta select korchi")
+      await loadMySelectionsForThisProduct();
 
       // Fetch related products (same category)
       if (productResponse.data?.category) {
@@ -117,6 +132,166 @@ export default function ProductDetailsPage() {
       console.error('Failed to fetch product details:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Load current user's selections for THIS specific product
+  const loadMySelectionsForThisProduct = async () => {
+    if (!currentUserId) {
+      setMySelectionsForThis([]);
+      return;
+    }
+    try {
+      const res = await fetchApi(api.mySelections);
+      const all = res?.data?.selections || res?.selections || [];
+      const filtered = Array.isArray(all)
+        ? all.filter((s: any) => s.itemId === productId || s.item?.id === productId)
+        : [];
+      setMySelectionsForThis(filtered);
+    } catch (e) {
+      setMySelectionsForThis([]);
+    }
+  };
+
+  const handleSelectProduct = async () => {
+    if (!currentUser) {
+      toast.error('Please login to select this product');
+      return;
+    }
+    if (product && product.owner?.id === currentUserId) {
+      toast.error('You cannot select your own product');
+      return;
+    }
+    if (!product || !product.quantity || product.quantity <= 0) {
+      toast.error('This product is out of stock');
+      return;
+    }
+
+    try {
+      setIsSelecting(true);
+
+      const qtyToSelect = Math.max(1, selectQuantity);
+
+      // Proper way: create a Selection record with quantity (backend decreases stock)
+      await fetchApi(api.selections, {
+        method: 'POST',
+        body: JSON.stringify({ itemId: productId, quantity: qtyToSelect }),
+      });
+
+      toast.success(`Selected ${qtyToSelect} unit(s)! Stock decreased.`);
+
+      // 1. Instant feel: decrease stock in UI right away by the chosen quantity
+      setProduct(prev => prev ? { ...prev, quantity: Math.max(0, (prev.quantity ?? 0) - qtyToSelect) } : null);
+
+      // Reset quantity selector to 1 after selection
+      setSelectQuantity(1);
+
+      // 2. Logical sync: fetch real stock + your selected count from server
+      await fetchProductDetails();
+    } catch (error: any) {
+      console.error('Select Product API error:', error);
+      toast.error(error?.message || 'Failed to select product. Make sure backend is running with `npm run dev` in backend folder.');
+    } finally {
+      setIsSelecting(false);
+    }
+  };
+
+  // Add to Cart (client-side cart for later checkout)
+  const handleAddToCart = () => {
+    if (!product || !currentUser) {
+      toast.error('Please login to add to cart');
+      return;
+    }
+    if (product.owner?.id === currentUserId) {
+      toast.error('You cannot add your own product to cart');
+      return;
+    }
+    if (!product.quantity || product.quantity <= 0) {
+      toast.error('This product is out of stock');
+      return;
+    }
+
+    const qty = Math.min(selectQuantity, product.quantity);
+
+    addToCart({
+      id: product.id,
+      title: product.title,
+      price: product.price,
+      image: product.images?.[0] || '',
+      maxStock: product.quantity,
+    }, qty);
+
+    toast.success(`${qty} × ${product.title} added to cart!`);
+
+    // Reset selector to 1 after adding
+    setSelectQuantity(1);
+  };
+
+  // Buy Now — Direct selection (skips cart, goes straight to My Orders)
+  const handleBuyNow = async () => {
+    if (!product || !currentUser) {
+      toast.error('Please login to buy now');
+      return;
+    }
+    if (product.owner?.id === currentUserId) {
+      toast.error('You cannot buy your own product');
+      return;
+    }
+    if (!product.quantity || product.quantity <= 0) {
+      toast.error('This product is out of stock');
+      return;
+    }
+
+    const qtyToBuy = Math.min(selectQuantity, product.quantity);
+
+    try {
+      setIsSelecting(true);
+
+      await fetchApi(api.selections, {
+        method: 'POST',
+        body: JSON.stringify({ itemId: productId, quantity: qtyToBuy }),
+      });
+
+      toast.success(`Bought ${qtyToBuy} unit(s)! Stock decreased.`);
+
+      // Update stock in UI immediately
+      setProduct(prev => prev ? { ...prev, quantity: Math.max(0, (prev.quantity ?? 0) - qtyToBuy) } : null);
+
+      // Go straight to My Orders so user can track
+      router.push('/dashboard/orders');
+    } catch (error: any) {
+      toast.error(error?.message || 'Failed to complete purchase');
+    } finally {
+      setIsSelecting(false);
+      setSelectQuantity(1);
+    }
+  };
+
+  // Owner-only: Quick stock adjust (+1 / -1)
+  const handleStockChange = async (delta: number) => {
+    if (!product || !currentUser || currentUserId !== product.owner?.id) {
+      toast.error('Only the product owner can adjust stock');
+      return;
+    }
+
+    const currentQty = product.quantity ?? 0;
+    const newQty = Math.max(0, currentQty + delta);
+
+    if (newQty === currentQty) return;
+
+    try {
+      await fetchApi(`${api.items}/${productId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ quantity: newQty }),
+      });
+
+      // Optimistic update for instant feedback
+      setProduct({ ...product, quantity: newQty });
+
+      toast.success(`Stock ${delta > 0 ? 'increased' : 'decreased'} to ${newQty}`);
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to update stock');
+      await fetchProductDetails(); // fallback sync
     }
   };
 
@@ -251,25 +426,136 @@ export default function ProductDetailsPage() {
                 ৳{Number(product.price).toLocaleString()}
               </div>
               {product.quantity !== undefined && (
-                <div className="mb-6">
+                <div className="mb-6 flex items-center gap-3">
                   <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold
                     ${product.quantity > 10 ? 'bg-sky-100 text-sky-700' : 
                       product.quantity > 0 ? 'bg-amber-100 text-amber-700' : 
                       'bg-red-100 text-red-700'}`}>
                     {product.quantity > 0 ? `${product.quantity} in stock` : 'Out of stock'}
                   </span>
+
+                  {/* Quick stock adjust for owner only */}
+                  {currentUserId === product.owner?.id && (
+                    <div className="flex items-center border border-sky-300 rounded-full overflow-hidden bg-white shadow-sm">
+                      <button
+                        onClick={() => handleStockChange(-1)}
+                        disabled={(product.quantity || 0) <= 0}
+                        className="px-3 py-1 text-lg font-bold text-sky-600 hover:bg-sky-50 active:bg-sky-100 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                        aria-label="Decrease stock"
+                      >
+                        −
+                      </button>
+                      <div className="px-2 text-[10px] text-sky-500 font-medium select-none">STOCK</div>
+                      <button
+                        onClick={() => handleStockChange(1)}
+                        className="px-3 py-1 text-lg font-bold text-sky-600 hover:bg-sky-50 active:bg-sky-100 transition"
+                        aria-label="Increase stock"
+                      >
+                        +
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
 
-              <div className="flex gap-3 pt-2">
-                <Button size="lg" className="flex-1 bg-sky-600 hover:bg-sky-700 text-base font-semibold">
-                  Contact Seller
-                </Button>
+              {/* Improved visual: Your personal selection count (clear & prominent) */}
+              {currentUser && currentUserId !== product.owner?.id && mySelectionsForThis.length > 0 && (
+                <div className="mb-5 flex items-center gap-3">
+                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-emerald-50 border border-emerald-200 shadow-sm">
+                    <span className="text-emerald-600 font-semibold text-sm tracking-wide">YOU SELECTED</span>
+                    <span className="text-3xl font-bold text-emerald-700 tabular-nums tracking-tighter">
+                      {mySelectedCount}
+                    </span>
+                    <span className="text-emerald-600 text-sm font-medium">unit(s)</span>
+                  </div>
+                  <div className="text-xs text-emerald-600 max-w-[140px] leading-tight">
+                    These are reserved for you pending approval
+                  </div>
+                </div>
+              )}
 
-                <Button variant="outline" size="lg" className="border-sky-200 hover:bg-sky-50">
-                  <Share className="h-5 w-5" />
-                </Button>
-              </div>
+               {/* Quantity selector - only for buyers who can select */}
+               {currentUser && currentUserId !== product?.owner?.id && (product?.quantity ?? 0) > 0 && (
+                 <div className="mb-3 flex items-center justify-between bg-white border border-sky-200 rounded-2xl px-4 py-3">
+                   <div>
+                     <div className="text-xs text-sky-600 font-medium">How many do you need?</div>
+                     <div className="text-sm text-gray-500">Max available: {product?.quantity}</div>
+                   </div>
+
+                   <div className="flex items-center gap-2">
+                     <button
+                       onClick={() => setSelectQuantity(Math.max(1, selectQuantity - 1))}
+                       className="w-9 h-9 flex items-center justify-center rounded-full border border-sky-300 text-xl font-bold text-sky-600 hover:bg-sky-50 active:bg-sky-100"
+                     >
+                       −
+                     </button>
+
+                     <input
+                       type="number"
+                       value={selectQuantity}
+                       onChange={(e) => {
+                         const val = parseInt(e.target.value) || 1;
+                         const max = product?.quantity ?? 1;
+                         setSelectQuantity(Math.min(max, Math.max(1, val)));
+                       }}
+                       className="w-16 text-center text-xl font-bold border border-sky-300 rounded-xl py-1 focus:outline-none focus:border-sky-500"
+                     />
+
+                     <button
+                       onClick={() => setSelectQuantity(Math.min((product?.quantity ?? 1), selectQuantity + 1))}
+                       className="w-9 h-9 flex items-center justify-center rounded-full border border-sky-300 text-xl font-bold text-sky-600 hover:bg-sky-50 active:bg-sky-100"
+                     >
+                       +
+                     </button>
+                   </div>
+                 </div>
+               )}
+
+                <div className="flex gap-3 pt-2">
+                 {currentUser && product?.owner?.id !== currentUserId ? (
+                   <>
+                     {/* Buy Now - Direct purchase, skips cart */}
+                     <Button
+                       size="lg"
+                       onClick={handleBuyNow}
+                       disabled={isSelecting || (product?.quantity ?? 0) <= 0}
+                       className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-base font-semibold"
+                     >
+                       {isSelecting ? 'Processing...' : `Buy Now (${selectQuantity})`}
+                     </Button>
+
+                     {/* Main Direct Select Button */}
+                     <Button
+                       size="lg"
+                       onClick={handleSelectProduct}
+                       disabled={isSelecting || (product?.quantity ?? 0) <= 0}
+                       className="flex-1 bg-sky-600 hover:bg-sky-700 text-base font-semibold"
+                     >
+                       {isSelecting ? 'Selecting...' : `Select ${selectQuantity} Now`}
+                     </Button>
+
+                     {/* Add to Cart - collects multiple for later */}
+                     <Button
+                       size="lg"
+                       variant="outline"
+                       onClick={handleAddToCart}
+                       disabled={(product?.quantity ?? 0) <= 0}
+                       className="border-sky-300 hover:bg-sky-50 text-sky-700 font-semibold flex items-center gap-2"
+                     >
+                       <ShoppingCart className="h-5 w-5" />
+                       Add to Cart
+                     </Button>
+                   </>
+                 ) : (
+                   <Button size="lg" className="flex-1 bg-sky-600 hover:bg-sky-700 text-base font-semibold">
+                     Contact Seller
+                   </Button>
+                 )}
+
+                 <Button variant="outline" size="lg" className="border-sky-200 hover:bg-sky-50">
+                   <Share className="h-5 w-5" />
+                 </Button>
+               </div>
             </div>
 
             {/* Seller Info */}

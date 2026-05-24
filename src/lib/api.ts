@@ -45,6 +45,12 @@ export const api = {
     generateReview: `${API_BASE_URL}/ai/generate-review`,
     recommendations: `${API_BASE_URL}/ai/recommendations`,
   },
+  selections: `${API_BASE_URL}/selections`,
+  mySelections: `${API_BASE_URL}/selections/my-selections`,
+  approvedSelections: `${API_BASE_URL}/selections/approved`,
+  pendingSelections: `${API_BASE_URL}/selections/pending`,
+  approveSelection: (id: string) => `${API_BASE_URL}/selections/${id}/approve`,
+  rejectSelection: (id: string) => `${API_BASE_URL}/selections/${id}/reject`,
 };
 
 export async function fetchApi(url: string, options: RequestInit = {}) {

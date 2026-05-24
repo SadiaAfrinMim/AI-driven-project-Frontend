@@ -50,6 +50,7 @@ interface Stats {
   reportedReviews?: number;
   myItems?: number;
   myReviews?: number;
+  myOrders?: number;
 }
 
 interface Review {
@@ -191,9 +192,20 @@ export default function DashboardHome() {
               ? myReviewsRes.data.length
               : 0;
 
+            // Fetch my orders count
+            let myOrders = 0;
+            try {
+              const ordersRes = await fetchApi(api.mySelections);
+              const list = ordersRes?.data?.selections || ordersRes?.selections || [];
+              myOrders = Array.isArray(list) ? list.length : 0;
+            } catch {
+              myOrders = 0;
+            }
+
             setStats({
               myItems: 5,
               myReviews,
+              myOrders,
               aiInteractions: 0,
               totalItems: 5,
               totalReviews: myReviews,
@@ -202,6 +214,7 @@ export default function DashboardHome() {
             setStats({
               myItems: 5,
               myReviews: 0,
+              myOrders: 0,
               aiInteractions: 0,
               totalItems: 5,
               totalReviews: 0,
@@ -295,6 +308,22 @@ export default function DashboardHome() {
             <p className="text-sm text-gray-600">Member Status</p>
           </CardContent>
         </Card>
+
+        {/* My Orders - NEW */}
+        <Link href="/dashboard/orders">
+          <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-teal-50 to-white group cursor-pointer">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-3 bg-teal-100 rounded-xl group-hover:bg-teal-200 transition-colors">
+                  <Package className="w-6 h-6 text-teal-600" />
+                </div>
+                <Badge variant="secondary" className="bg-teal-100 text-teal-700">Orders</Badge>
+              </div>
+              <div className="text-4xl font-bold text-gray-900 mb-1">{stats.myOrders || 0}</div>
+              <p className="text-sm text-gray-600">My Orders</p>
+            </CardContent>
+          </Card>
+        </Link>
       </div>
 
       {/* Quick Actions */}
