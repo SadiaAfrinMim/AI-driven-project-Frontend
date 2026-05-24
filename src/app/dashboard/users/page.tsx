@@ -144,7 +144,7 @@ export default function UsersPage() {
                 {user.profileImage ? (
                   <img src={user.profileImage} alt={user.name} className="w-14 h-14 rounded-full object-cover ring-2 ring-offset-2 ring-gray-100" />
                 ) : (
-                  <div className="w-14 h-14 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center text-white text-2xl font-semibold">
+                  <div className="w-14 h-14 rounded-full bg-sky-600 flex items-center justify-center text-white text-2xl font-semibold">
                     {user.name.charAt(0).toUpperCase()}
                   </div>
                 )}

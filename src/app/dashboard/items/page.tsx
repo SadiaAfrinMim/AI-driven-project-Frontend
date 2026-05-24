@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import Cookies from 'js-cookie';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -35,16 +36,20 @@ export default function DashboardItemsPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Current user from cookie
-  const Cookies = require('js-cookie');
-  const currentUser = (() => {
+  // Safe cookie reading after mount (prevents hydration / reload issues)
+  const [currentUser, setCurrentUser] = useState<any>(null);
+
+  useEffect(() => {
     try {
       const u = Cookies.get('user');
-      return u ? JSON.parse(u) : null;
-    } catch {
-      return null;
+      if (u) {
+        setCurrentUser(JSON.parse(u));
+      }
+    } catch (e) {
+      console.warn('Failed to parse user cookie');
     }
-  })();
+  }, []);
+
   const isAdmin = currentUser?.role === 'ADMIN';
   const isManager = currentUser?.role === 'MANAGER';
   const isPrivileged = isAdmin || isManager;
@@ -96,7 +101,7 @@ export default function DashboardItemsPage() {
 
   useEffect(() => {
     void fetchItems();
-  }, []); // fetch once on mount (role is stable during page lifetime)
+  }, []);
 
   const handleDeleteItem = async (itemId: string) => {
     try {
@@ -384,7 +389,7 @@ export default function DashboardItemsPage() {
                       className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-300"
                     />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center text-gray-400 text-sm bg-gradient-to-br from-gray-100 to-gray-200">
+                    <div className="w-full h-full flex items-center justify-center text-gray-400 text-sm bg-sky-100">
                       No Image
                     </div>
                   )}
@@ -465,56 +470,55 @@ export default function DashboardItemsPage() {
                   <p className="text-[11px] text-gray-500 mb-2">{item.location}</p>
 
                   {/* Action Buttons */}
-                  <div className="mt-auto pt-2 border-t flex flex-wrap gap-1.5">
-                    {isPrivileged ? (
-                      <>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="flex-1 h-7 text-xs"
-                          onClick={() => {
-                            setModalMode('edit');
-                            setSelectedItem(item);
-                            setFormTitle(item.title || '');
-                            setFormDescription(item.description || '');
-                            setFormPrice(String(item.price ?? ''));
-                            setFormQuantity(String(item.quantity ?? ''));
-                            setFormLocation(item.location || '');
-                            setFormCategory(item.category || '');
-                            setFormTags((item.tags || []).join(', '));
-                            setFormIsAIContent(!!item.isAIContent);
-                            setFormImages([]);
-                            setError(null);
-                            setModalOpen(true);
-                          }}
-                        >
-                          <Edit className="w-3 h-3 mr-1" />
-                          Edit
-                        </Button>
+                   <div className="mt-auto pt-2 border-t flex flex-wrap gap-1.5">
+                     {/* Owner can always edit/delete their own items (regardless of role) */}
+                     {item.ownerId === currentUserId ? (
+                       <>
+                         <Button
+                           variant="outline"
+                           size="sm"
+                           className="flex-1 h-7 text-xs"
+                           onClick={() => {
+                             setModalMode('edit');
+                             setSelectedItem(item);
+                             setFormTitle(item.title || '');
+                             setFormDescription(item.description || '');
+                             setFormPrice(String(item.price ?? ''));
+                             setFormQuantity(String(item.quantity ?? ''));
+                             setFormLocation(item.location || '');
+                             setFormCategory(item.category || '');
+                             setFormTags((item.tags || []).join(', '));
+                             setFormIsAIContent(!!item.isAIContent);
+                             setFormImages([]);
+                             setError(null);
+                             setModalOpen(true);
+                           }}
+                         >
+                           <Edit className="w-3 h-3 mr-1" />
+                           Edit
+                         </Button>
 
-                        {item.ownerId === currentUserId && (
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            className="flex-1 h-7 text-xs"
-                            onClick={() => handleDeleteItem(item.id)}
-                          >
-                            <Trash2 className="w-3 h-3 mr-1" />
-                            Delete
-                          </Button>
-                        )}
-                      </>
-                    ) : (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full h-7 text-xs"
-                        onClick={() => alert('You do not have permission to edit or delete this item')}
-                      >
-                        View Details
-                      </Button>
-                    )}
-                  </div>
+                         <Button
+                           variant="destructive"
+                           size="sm"
+                           className="flex-1 h-7 text-xs"
+                           onClick={() => handleDeleteItem(item.id)}
+                         >
+                           <Trash2 className="w-3 h-3 mr-1" />
+                           Delete
+                         </Button>
+                       </>
+                     ) : (
+                       <Button
+                         variant="outline"
+                         size="sm"
+                         className="w-full h-7 text-xs"
+                         onClick={() => alert('You can only manage items you created')}
+                       >
+                         View Details
+                       </Button>
+                     )}
+                   </div>
                 </CardContent>
               </Card>
             );

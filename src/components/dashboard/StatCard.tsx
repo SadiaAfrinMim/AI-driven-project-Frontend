@@ -19,7 +19,7 @@ export function StatCard({
   return (
     <Card
       className={
-        'border-0 bg-gradient-to-br from-white to-gray-50/60 shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5 ' +
+        'border-0 bg-sky-50 shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5 ' +
         className
       }
     >

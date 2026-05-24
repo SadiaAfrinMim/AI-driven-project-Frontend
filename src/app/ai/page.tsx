@@ -109,7 +109,7 @@ export default function AISellerStudio() {
   return (
     <div className="min-h-screen bg-slate-50 pb-20">
       {/* Header */}
-      <div className="bg-gradient-to-r from-sky-600 to-blue-600 text-white py-10">
+      <div className="bg-sky-600 text-white py-10">
         <div className="max-w-5xl mx-auto px-6">
           <div className="flex items-center gap-4">
             <div className="p-3 bg-white/20 rounded-2xl">
@@ -127,7 +127,7 @@ export default function AISellerStudio() {
 
         {/* ========== 1. PRODUCT CONTENT GENERATOR (Most Relevant) ========== */}
         <Card className="border-0 shadow-xl overflow-hidden">
-          <div className="h-1.5 bg-gradient-to-r from-sky-500 to-blue-600" />
+          <div className="h-1.5 bg-sky-500" />
           
           <CardHeader>
             <div className="flex items-center gap-3">

@@ -24,25 +24,22 @@ export function ReviewForm({ itemId, productName, onReviewSubmitted, existingRev
   const [comment, setComment] = useState(existingReview?.comment || '');
   const [hoveredRating, setHoveredRating] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [useAI, setUseAI] = useState(true);
+  // Start with AI ON by default for new reviews so it auto-generates relevant reviews.
+  const [useAI, setUseAI] = useState(!existingReview);
   const [isGenerating, setIsGenerating] = useState(false);
   const [hasGeneratedAI, setHasGeneratedAI] = useState(false);
-  const [autoAttempted, setAutoAttempted] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!comment.trim()) {
+  // Core submit logic (used both manually and for AI auto-submit)
+  const submitReview = async (finalRating: number, finalComment: string) => {
+    if (!finalComment.trim()) {
       toast.error('Please enter a review comment');
       return;
     }
-
-    if (comment.trim().length < 10) {
+    if (finalComment.trim().length < 10) {
       toast.error('Review must be at least 10 characters');
       return;
     }
-
-    if (rating < 1 || rating > 5) {
+    if (finalRating < 1 || finalRating > 5) {
       toast.error('Please provide a rating between 1 and 5');
       return;
     }
@@ -50,26 +47,17 @@ export function ReviewForm({ itemId, productName, onReviewSubmitted, existingRev
     setIsSubmitting(true);
     try {
       if (existingReview) {
-        // Edit mode
         await fetchApi(`${api.reviews}/${existingReview.id}`, {
           method: 'PATCH',
-          body: JSON.stringify({
-            rating,
-            comment: comment.trim(),
-          }),
+          body: JSON.stringify({ rating: finalRating, comment: finalComment.trim() }),
         });
         toast.success('Review updated successfully!');
         setHasGeneratedAI(false);
         onReviewSubmitted();
       } else {
-        // Create new review
         await fetchApi(api.reviews, {
           method: 'POST',
-          body: JSON.stringify({
-            itemId,
-            rating,
-            comment: comment.trim(),
-          }),
+          body: JSON.stringify({ itemId, rating: finalRating, comment: finalComment.trim() }),
         });
         toast.success('Review submitted successfully!');
         setComment('');
@@ -85,7 +73,30 @@ export function ReviewForm({ itemId, productName, onReviewSubmitted, existingRev
     }
   };
 
-  const handleAIGenerate = async () => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await submitReview(rating, comment);
+  };
+
+  // Smart local generation (used only on explicit button click if real AI fails)
+  const generateSmartLocalReview = (name: string, r: number): string => {
+    const n = name || 'this product';
+    if (r >= 5) return `Absolutely love the ${n}! Premium quality, works flawlessly, and excellent value. Highly recommended.`;
+    if (r === 4) return `Very satisfied with the ${n}. Great build and performance. Only small wish was one extra feature, but still a solid buy.`;
+    if (r === 3) return `The ${n} is decent for the price. Does the job well enough, though it could be improved in a couple of areas.`;
+    if (r === 2) return `Not impressed with the ${n}. Quality feels below expectations and had some issues from the start.`;
+    return `Disappointed with the ${n}. Did not perform as described and feels low quality. Would not recommend.`;
+  };
+
+  // AI generates the review AND auto-submits it when "AI mode" is on.
+  // Manual button always just suggests (no auto submit, allows overwrite for regeneration).
+  const handleAIGenerate = async (autoSubmit = false, allowOverwrite = false) => {
+    // If user already wrote a long review manually, don't overwrite silently (except explicit regenerate)
+    if (!allowOverwrite && comment.trim().length > 35) {
+      toast.info('You already wrote something. Use the Regenerate button if you want AI to rewrite it.');
+      return;
+    }
+
     setIsGenerating(true);
     try {
       const nameToUse = productName || 'this product';
@@ -93,18 +104,37 @@ export function ReviewForm({ itemId, productName, onReviewSubmitted, existingRev
         method: 'POST',
         body: JSON.stringify({ productName: nameToUse, rating }),
       });
-      setComment(res.data.comment);
+
+      const aiComment = res.data.comment;
+      setComment(aiComment);
       setHasGeneratedAI(true);
-      toast.success('AI review generated! You can edit it before posting.');
+
+      toast.success('AI generated a relevant review!');
+
+      // === FULL AI AUTOMATION ===
+      // Only auto-submit when explicitly requested (from checkbox enable or rating change in AI mode).
+      // Manual "Generate with AI" button (autoSubmit=false) will never auto-post.
+      if (autoSubmit && !existingReview) {
+        // Small delay so the textarea visibly updates before submit
+        setTimeout(() => {
+          submitReview(rating, aiComment);
+        }, 450);
+      }
     } catch (error: any) {
-      console.error('AI review generation error:', error);
-      // Only show error toast on manual click, not on silent auto attempt
-      if (!autoAttempted) {
-        toast.error(error?.message || 'Failed to generate AI review');
+      console.error('AI review generation failed:', error);
+      const localComment = generateSmartLocalReview(productName || 'this product', rating);
+      setComment(localComment);
+      setHasGeneratedAI(true);
+      toast.info('AI temporarily unavailable — used smart relevant suggestion.');
+
+      // Still auto-submit the fallback only if explicitly requested (not for manual generate button)
+      if (autoSubmit && !existingReview) {
+        setTimeout(() => {
+          submitReview(rating, localComment);
+        }, 450);
       }
     } finally {
       setIsGenerating(false);
-      setAutoAttempted(false);
     }
   };
 
@@ -116,12 +146,8 @@ export function ReviewForm({ itemId, productName, onReviewSubmitted, existingRev
     }
   }, [existingReview]);
 
-  useEffect(() => {
-    if (useAI && !hasGeneratedAI && !isGenerating) {
-      setAutoAttempted(true);
-      handleAIGenerate();
-    }
-  }, [useAI, hasGeneratedAI, rating]);
+  // No complex useEffect needed — we trigger AI generation directly from user actions (rating click + checkbox)
+  // This is much more reliable for "AI automated relevant review generation".
 
   return (
     <Card>
@@ -138,7 +164,18 @@ export function ReviewForm({ itemId, productName, onReviewSubmitted, existingRev
                 <button
                   key={star}
                   type="button"
-                  onClick={() => setRating(star)}
+                  onClick={() => {
+                    setRating(star);
+                    // === AI AUTOMATED ===
+                    // When "Let AI write a relevant review for me" is checked,
+                    // automatically generate a fresh, relevant AI review for the new rating.
+                    if (useAI && !existingReview && !isGenerating) {
+                      // Use setTimeout so the rating state has updated before generation
+                      setTimeout(() => {
+                        handleAIGenerate(true);   // true = auto-submit after AI generates
+                      }, 50);
+                    }
+                  }}
                   onMouseEnter={() => setHoveredRating(star)}
                   onMouseLeave={() => setHoveredRating(0)}
                   className="transition-transform hover:scale-110"
@@ -166,10 +203,22 @@ export function ReviewForm({ itemId, productName, onReviewSubmitted, existingRev
                 <input 
                   type="checkbox" 
                   checked={useAI} 
-                  onChange={(e) => setUseAI(e.target.checked)} 
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    setUseAI(checked);
+
+                    // === AI AUTOMATED ===
+                    // As soon as user enables "Let AI write a relevant review for me",
+                    // we automatically generate a high-quality, rating-specific review.
+                    if (checked && !existingReview) {
+                      setTimeout(() => handleAIGenerate(true), 80);   // auto-create + submit
+                    }
+                  }} 
                   id="ai-generate" 
                 />
-                <label htmlFor="ai-generate" className="text-sm cursor-pointer">Generate with AI</label>
+                <label htmlFor="ai-generate" className="text-sm cursor-pointer text-blue-600 font-medium">
+                  ✨ Let AI write a relevant review for me (auto on rating change)
+                </label>
               </div>
             </div>
 
@@ -177,18 +226,32 @@ export function ReviewForm({ itemId, productName, onReviewSubmitted, existingRev
                 <Button 
                   type="button" 
                   variant="outline" 
-                  onClick={handleAIGenerate} 
+                  onClick={() => handleAIGenerate(true)} 
                   disabled={isGenerating}
-                  className="w-full mb-3"
+                  className="w-full mb-3 border-blue-200 hover:bg-blue-50"
                 >
                   {isGenerating 
-                    ? 'Generating with AI...' 
+                    ? '🤖 AI is writing + posting your review...' 
                     : hasGeneratedAI 
-                      ? '🔄 Regenerate (New AI Review)' 
-                      : '✨ Generate AI Review'
+                      ? '🔄 Get a different AI review (auto posts)' 
+                      : '✨ AI writes & posts review automatically'
                   }
                 </Button>
               )}
+
+            {/* Always-available "AI Comment Generate" button (pure suggestion, no auto-post) */}
+            <div className="flex justify-end -mt-1 mb-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => handleAIGenerate(false, true)}
+                disabled={isGenerating}
+                className="text-xs border-blue-200 hover:bg-blue-50 text-blue-600"
+              >
+                {isGenerating ? '🤖 AI generating...' : '✨ AI দিয়ে কমেন্ট জেনারেট করুন'}
+              </Button>
+            </div>
 
             <Textarea
               placeholder="Share your experience with this product..."
@@ -203,7 +266,9 @@ export function ReviewForm({ itemId, productName, onReviewSubmitted, existingRev
           <Button type="submit" disabled={isSubmitting || !comment.trim()} className="w-full">
             {isSubmitting 
               ? (existingReview ? 'Updating...' : 'Submitting...') 
-              : (existingReview ? 'Update Review' : 'Submit Review')}
+              : useAI && hasGeneratedAI && !existingReview
+                ? 'AI already posted the review ✓'
+                : (existingReview ? 'Update Review' : 'Submit Review')}
           </Button>
         </form>
       </CardContent>

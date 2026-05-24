@@ -112,9 +112,9 @@ export default function LandingPage() {
   }, []);
 
   return (
-    <div className="min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,_rgba(246,189,96,0.18),_transparent_30%),radial-gradient(circle_at_top_right,_rgba(69,123,157,0.16),_transparent_28%),linear-gradient(180deg,_rgba(255,251,245,1),_rgba(247,245,239,1))]">
+    <div className="min-h-screen overflow-hidden bg-sky-50">
       <section className="relative border-b border-border/60">
-        <div className="absolute inset-0 opacity-50 [background-image:linear-gradient(rgba(29,53,87,0.04)_1px,transparent_1px),linear-gradient(90deg,rgba(29,53,87,0.04)_1px,transparent_1px)] [background-size:40px_40px]" />
+        <div className="absolute inset-0 opacity-50 bg-sky-100/30" />
         <div className="relative mx-auto grid max-w-7xl gap-10 px-4 py-16 sm:px-6 lg:grid-cols-[1.1fr_0.9fr] lg:px-8 lg:py-24">
           <div className="space-y-8">
             <Badge className="rounded-full bg-primary/10 px-4 py-2 text-primary shadow-sm">
@@ -303,7 +303,7 @@ export default function LandingPage() {
                   {product.images?.[0] ? (
                     <img src={product.images[0]} alt={product.title} className="h-full w-full object-cover" />
                   ) : (
-                    <div className="flex h-full items-center justify-center bg-[linear-gradient(135deg,_rgba(246,189,96,0.15),_rgba(69,123,157,0.12))]">
+                    <div className="flex h-full items-center justify-center bg-sky-100">
                       <Package className="h-10 w-10 text-primary/70" />
                     </div>
                   )}

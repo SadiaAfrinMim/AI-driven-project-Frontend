@@ -90,7 +90,7 @@ export default function PrivacyPage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Hero Section */}
-      <section className="relative py-20 bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-blue-900">
+      <section className="relative py-20 bg-sky-50 dark:bg-gray-900">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-4xl mx-auto">
             <Badge variant="secondary" className="mb-4">
@@ -137,7 +137,7 @@ export default function PrivacyPage() {
               </div>
             </div>
             <div className="relative">
-              <div className="bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900/20 dark:to-purple-900/20 rounded-2xl p-8">
+              <div className="bg-sky-100 dark:bg-sky-900 rounded-2xl p-8">
                 <Shield className="h-20 w-20 text-primary mx-auto mb-4" />
                 <h3 className="text-xl font-semibold text-center mb-2">Your Data, Your Control</h3>
                 <p className="text-muted-foreground text-center text-sm">

@@ -196,7 +196,7 @@ export default function DashboardHome() {
             let myOrders = 0;
             try {
               const ordersRes = await fetchApi(api.mySelections);
-              const list = ordersRes?.data?.selections || ordersRes?.selections || [];
+              const list = ordersRes?.data?.selections || ordersRes?.data || ordersRes?.selections || [];
               myOrders = Array.isArray(list) ? list.length : 0;
             } catch {
               myOrders = 0;
@@ -239,7 +239,7 @@ export default function DashboardHome() {
   const renderUserDashboard = () => (
     <div className="space-y-10">
       {/* Premium Welcome Header */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 p-10 text-white shadow-2xl">
+      <div className="relative overflow-hidden rounded-3xl bg-sky-600 p-10 text-white shadow-2xl">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
           <div>
             <h1 className="text-4xl font-bold tracking-tight mb-3">
@@ -257,7 +257,7 @@ export default function DashboardHome() {
 
       {/* Personal Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
-        <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-blue-50 to-white group">
+        <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-sky-50 group">
           <CardContent className="p-6">
             <div className="flex items-center justify-between mb-4">
               <div className="p-3 bg-blue-100 rounded-xl group-hover:bg-blue-200 transition-colors">
@@ -270,7 +270,7 @@ export default function DashboardHome() {
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-green-50 to-white group">
+        <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-sky-50 group">
           <CardContent className="p-6">
             <div className="flex items-center justify-between mb-4">
               <div className="p-3 bg-green-100 rounded-xl group-hover:bg-green-200 transition-colors">
@@ -283,7 +283,7 @@ export default function DashboardHome() {
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-purple-50 to-white group">
+        <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-sky-50 group">
           <CardContent className="p-6">
             <div className="flex items-center justify-between mb-4">
               <div className="p-3 bg-purple-100 rounded-xl group-hover:bg-purple-200 transition-colors">
@@ -296,7 +296,7 @@ export default function DashboardHome() {
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-orange-50 to-white group">
+        <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-sky-50 group">
           <CardContent className="p-6">
             <div className="flex items-center justify-between mb-4">
               <div className="p-3 bg-orange-100 rounded-xl group-hover:bg-orange-200 transition-colors">
@@ -311,7 +311,7 @@ export default function DashboardHome() {
 
         {/* My Orders - NEW */}
         <Link href="/dashboard/orders">
-          <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-teal-50 to-white group cursor-pointer">
+          <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-sky-50 group cursor-pointer">
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <div className="p-3 bg-teal-100 rounded-xl group-hover:bg-teal-200 transition-colors">
@@ -658,7 +658,7 @@ export default function DashboardHome() {
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <Link href="/dashboard/users">
-            <Card className="border-2 border-red-200 hover:border-red-500 hover:shadow-2xl transition-all group cursor-pointer h-full bg-gradient-to-br from-red-50 to-white">
+            <Card className="border-2 border-sky-200 hover:border-sky-500 hover:shadow-2xl transition-all group cursor-pointer h-full bg-sky-50">
               <CardContent className="p-6">
                 <Users className="w-12 h-12 text-red-500 mb-4 group-hover:scale-110 transition-transform" />
                 <h3 className="font-bold text-xl mb-2">User Management</h3>
@@ -669,7 +669,7 @@ export default function DashboardHome() {
           </Link>
 
           <Link href="/dashboard/items">
-            <Card className="border-2 border-blue-200 hover:border-blue-500 hover:shadow-2xl transition-all group cursor-pointer h-full bg-gradient-to-br from-blue-50 to-white">
+            <Card className="border-2 border-sky-200 hover:border-sky-500 hover:shadow-2xl transition-all group cursor-pointer h-full bg-sky-50">
               <CardContent className="p-6">
                 <Package className="w-12 h-12 text-blue-500 mb-4 group-hover:scale-110 transition-transform" />
                 <h3 className="font-bold text-xl mb-2">Content Control</h3>
@@ -680,7 +680,7 @@ export default function DashboardHome() {
           </Link>
 
           <Link href="/dashboard/analytics">
-            <Card className="border-2 border-green-200 hover:border-green-500 hover:shadow-2xl transition-all group cursor-pointer h-full bg-gradient-to-br from-green-50 to-white">
+            <Card className="border-2 border-sky-200 hover:border-sky-500 hover:shadow-2xl transition-all group cursor-pointer h-full bg-sky-50">
               <CardContent className="p-6">
                 <BarChart3 className="w-12 h-12 text-green-500 mb-4 group-hover:scale-110 transition-transform" />
                 <h3 className="font-bold text-xl mb-2">System Analytics</h3>
@@ -691,7 +691,7 @@ export default function DashboardHome() {
           </Link>
 
           <Link href="/ai">
-            <Card className="border-2 border-purple-200 hover:border-purple-500 hover:shadow-2xl transition-all group cursor-pointer h-full bg-gradient-to-br from-purple-50 to-white">
+            <Card className="border-2 border-sky-200 hover:border-sky-500 hover:shadow-2xl transition-all group cursor-pointer h-full bg-sky-50">
               <CardContent className="p-6">
                 <Bot className="w-12 h-12 text-purple-500 mb-4 group-hover:scale-110 transition-transform" />
                 <h3 className="font-bold text-xl mb-2">AI Management</h3>
@@ -704,7 +704,7 @@ export default function DashboardHome() {
       </div>
 
       {/* System Health */}
-      <Card className="border-0 shadow-xl bg-gradient-to-r from-gray-900 to-gray-800 text-white">
+      <Card className="border-0 shadow-xl bg-sky-800 text-white">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-white">
             <CheckCircle className="w-6 h-6 text-green-400" /> System Health Status

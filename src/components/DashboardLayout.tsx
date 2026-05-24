@@ -79,7 +79,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-blue-50/30">
+    <div className="min-h-screen bg-sky-50">
       <div className="flex">
         <Sidebar user={user} onLogout={handleLogout} />
         <div className="flex-1  transition-all duration-300 ease-in-out">

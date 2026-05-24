@@ -48,12 +48,26 @@ export default function ProductsPage() {
   const [sortBy, setSortBy] = useState<string | null>('createdAt');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc' | null>('desc');
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showFilters, setShowFilters] = useState(false);
 
   const itemsPerPage = 12;
-  const categories = ['Electronics', 'Clothing', 'Home & Garden', 'Sports', 'Books', 'Automotive'];
-  const locations = ['New York', 'Los Angeles', 'Chicago', 'Houston', 'Phoenix', 'Philadelphia'];
+
+  // Exact same categories as in Add Item modal for consistency
+  const categories = [
+    'Electronics',
+    'Fashion',
+    'Home & Living',
+    'Beauty',
+    'Sports & Outdoors',
+    'Books',
+    'Toys & Games',
+    'Health & Wellness',
+    'Automotive',
+    'Food & Grocery',
+  ];
 
   useEffect(() => {
     fetchProducts();
@@ -75,7 +89,8 @@ export default function ProductsPage() {
 
       // Use dedicated approved items endpoint
       const response = await fetchApi(`${api.items}/approved?${params}`);
-      const rawItems = response?.data?.items || [];
+      const rawItems = response?.data?.items || response?.data || [];
+      const meta = response?.data?.meta || {};
 
       const mappedItems = rawItems.map((it: any) => ({
         id: it.id,
@@ -94,9 +109,13 @@ export default function ProductsPage() {
       }));
 
       setProducts(mappedItems);
+      setTotalPages(meta.totalPages || Math.ceil((meta.total || mappedItems.length) / itemsPerPage) || 1);
+      setTotalItems(meta.total || mappedItems.length);
     } catch (error) {
       console.error('Failed to fetch products:', error);
       setProducts([]);
+      setTotalPages(1);
+      setTotalItems(0);
     } finally {
       setLoading(false);
     }
@@ -139,7 +158,7 @@ export default function ProductsPage() {
               className="w-full h-full object-cover group-hover:scale-[1.04] transition-transform duration-300"
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200">
+            <div className="w-full h-full flex items-center justify-center bg-sky-100">
               <Package className="h-10 w-10 text-gray-400" />
             </div>
           )}
@@ -236,7 +255,7 @@ export default function ProductsPage() {
     <Card className="hover:shadow-md transition-shadow">
       <CardContent className="p-4">
         <div className="flex gap-4">
-          <div className="w-24 h-24 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900 rounded-lg flex items-center justify-center flex-shrink-0">
+           <div className="w-24 h-24 bg-sky-100 dark:bg-sky-900 rounded-lg flex items-center justify-center flex-shrink-0">
             {product.images?.[0] ? (
               <img
                 src={product.images[0]}
@@ -297,7 +316,7 @@ export default function ProductsPage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Hero Section */}
-      <section className="relative py-16 bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-blue-900">
+      <section className="relative py-16 bg-sky-50 dark:bg-gray-900">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-4xl mx-auto">
             <h1 className="text-4xl md:text-6xl font-bold text-foreground mb-6">
@@ -320,188 +339,239 @@ export default function ProductsPage() {
         </div>
       </section>
 
-      {/* Filters and Controls */}
-      <section className="py-8 border-b border-border">
+      {/* Main Content with Professional Sidebar */}
+      <section className="py-8">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Button
-                variant="outline"
-                onClick={() => setShowFilters(!showFilters)}
-                className="flex items-center"
-              >
-                <SlidersHorizontal className="h-4 w-4 mr-2" />
-                Filters
-                {(selectedCategory || priceRange.min || priceRange.max) && (
-                  <Badge className="ml-2 bg-primary text-primary-foreground">
-                    {(selectedCategory ? 1 : 0) + (priceRange.min || priceRange.max ? 1 : 0)}
-                  </Badge>
-                )}
-              </Button>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            
+            {/* Professional Left Sidebar - Filters */}
+            <div className="lg:col-span-3">
+              <div className="sticky top-6 space-y-6">
+                <Card className="border border-gray-200 shadow-sm">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <SlidersHorizontal className="h-5 w-5" />
+                      Filters
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-6 pt-0">
+                    
+                    {/* Category Filter */}
+                    <div>
+                      <label className="text-sm font-semibold text-gray-700 mb-2 block">Category</label>
+                    <Select value={selectedCategory || ''} onValueChange={(value) => setSelectedCategory(value || null)}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="All Categories" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">All Categories</SelectItem>
+                        {categories.map((category) => (
+                          <SelectItem key={category} value={category}>{category}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    </div>
 
-              {(selectedCategory || priceRange.min || priceRange.max) && (
-                <Button variant="ghost" onClick={clearFilters} size="sm">
-                  Clear Filters
-                </Button>
-              )}
-            </div>
+                    {/* Price Range */}
+                    <div>
+                      <label className="text-sm font-semibold text-gray-700 mb-2 block">Price Range</label>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-xs text-muted-foreground">Min</label>
+                          <Input
+                            type="number"
+                            placeholder="0"
+                            value={priceRange.min}
+                            onChange={(e) => setPriceRange({ ...priceRange, min: e.target.value })}
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs text-muted-foreground">Max</label>
+                          <Input
+                            type="number"
+                            placeholder="Any"
+                            value={priceRange.max}
+                            onChange={(e) => setPriceRange({ ...priceRange, max: e.target.value })}
+                          />
+                        </div>
+                      </div>
+                    </div>
 
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">Sort by:</span>
-                <Select value={sortBy} onValueChange={setSortBy}>
-                  <SelectTrigger className="w-32">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="createdAt">Date</SelectItem>
-                    <SelectItem value="price">Price</SelectItem>
-                    <SelectItem value="rating">Rating</SelectItem>
-                    <SelectItem value="title">Name</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Select value={sortOrder} onValueChange={(value) => value && setSortOrder(value as 'asc' | 'desc')}>
-                  <SelectTrigger className="w-24">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="desc">↓ High</SelectItem>
-                    <SelectItem value="asc">↑ Low</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="flex items-center border rounded-lg">
-                <Button
-                  variant={viewMode === 'grid' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setViewMode('grid')}
-                  className="rounded-r-none"
-                >
-                  <Grid className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant={viewMode === 'list' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setViewMode('list')}
-                  className="rounded-l-none"
-                >
-                  <List className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          </div>
-
-          {/* Expandable Filters */}
-          {showFilters && (
-            <div className="mt-6 p-6 bg-muted/30 rounded-lg">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Category</label>
-                  <Select value={selectedCategory} onValueChange={(value) => setSelectedCategory(value || '')}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="All Categories" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">All Categories</SelectItem>
-                      {categories.map((category) => (
-                        <SelectItem key={category} value={category}>
-                          {category}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Min Price</label>
-                  <Input
-                    type="number"
-                    placeholder="0"
-                    value={priceRange.min}
-                    onChange={(e) => setPriceRange({ ...priceRange, min: e.target.value })}
-                  />
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Max Price</label>
-                  <Input
-                    type="number"
-                    placeholder="No limit"
-                    value={priceRange.max}
-                    onChange={(e) => setPriceRange({ ...priceRange, max: e.target.value })}
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* Products Grid/List */}
-      <section className="py-12">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          {loading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {Array.from({ length: 8 }).map((_, i) => (
-                <Card key={i} className="animate-pulse">
-                  <div className="aspect-square bg-muted rounded-t-lg"></div>
-                  <CardContent className="p-4">
-                    <div className="h-4 bg-muted rounded mb-2"></div>
-                    <div className="h-4 bg-muted rounded mb-2 w-3/4"></div>
-                    <div className="h-4 bg-muted rounded w-1/2"></div>
+                    {/* Quick Clear */}
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={clearFilters} 
+                      className="w-full"
+                    >
+                      Clear All Filters
+                    </Button>
                   </CardContent>
                 </Card>
-              ))}
+              </div>
             </div>
-          ) : products.length === 0 ? (
-            <div className="text-center py-12">
-              <Package className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-foreground mb-2">No products found</h3>
-              <p className="text-muted-foreground">Try adjusting your filters or search terms.</p>
-            </div>
-          ) : (
-            <>
-              <div className={`grid gap-5 mb-8 ${
-                viewMode === 'grid'
-                  ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5'
-                  : 'grid-cols-1'
-              }`}>
-                {products.map((product) => (
-                  viewMode === 'grid' ? (
-                    <ProductCard key={product.id} product={product} />
-                  ) : (
-                    <ProductListItem key={product.id} product={product} />
-                  )
-                ))}
+
+            {/* Main Products Area */}
+            <div className="lg:col-span-9">
+              {/* Top Controls Bar */}
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 pb-4 border-b">
+                <div className="flex items-center gap-4">
+                  <div className="text-sm text-muted-foreground">
+                    {totalItems} products found
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 w-full sm:w-auto">
+                  {/* Sort */}
+                  <div className="flex items-center gap-2 flex-1 sm:flex-none">
+                    <span className="text-sm text-muted-foreground hidden sm:inline">Sort:</span>
+                    <Select value={sortBy || ''} onValueChange={setSortBy}>
+                      <SelectTrigger className="w-full sm:w-[130px]">
+                        <SelectValue placeholder="Sort by" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="createdAt">Newest</SelectItem>
+                        <SelectItem value="price">Price</SelectItem>
+                        <SelectItem value="rating">Rating</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Select value={sortOrder || 'desc'} onValueChange={(v) => setSortOrder(v as any)}>
+                      <SelectTrigger className="w-[90px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="desc">High to Low</SelectItem>
+                        <SelectItem value="asc">Low to High</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* View Toggle */}
+                  <div className="flex items-center border rounded-lg">
+                    <Button
+                      variant={viewMode === 'grid' ? 'default' : 'ghost'}
+                      size="sm"
+                      onClick={() => setViewMode('grid')}
+                      className="rounded-r-none"
+                    >
+                      <Grid className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant={viewMode === 'list' ? 'default' : 'ghost'}
+                      size="sm"
+                      onClick={() => setViewMode('list')}
+                      className="rounded-l-none"
+                    >
+                      <List className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
               </div>
 
-              {/* Pagination */}
-              <div className="flex items-center justify-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                  disabled={currentPage === 1}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                  Previous
-                </Button>
-                <span className="text-sm text-muted-foreground px-4">
-                  Page {currentPage}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage(currentPage + 1)}
-                  disabled={products.length < itemsPerPage}
-                >
-                  Next
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
-            </>
-          )}
+              {/* Products Grid/List */}
+              {loading ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  {Array.from({ length: 8 }).map((_, i) => (
+                    <Card key={i} className="animate-pulse">
+                      <div className="aspect-square bg-muted rounded-t-lg"></div>
+                      <CardContent className="p-4">
+                        <div className="h-4 bg-muted rounded mb-2"></div>
+                        <div className="h-4 bg-muted rounded mb-2 w-3/4"></div>
+                        <div className="h-4 bg-muted rounded w-1/2"></div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : products.length === 0 ? (
+                <div className="text-center py-16 border rounded-2xl bg-muted/30">
+                  <Package className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-xl font-semibold mb-2">No products found</h3>
+                  <p className="text-muted-foreground">Try adjusting your filters or search.</p>
+                  <Button variant="outline" onClick={clearFilters} className="mt-4">Clear Filters</Button>
+                </div>
+              ) : (
+                <div className={`grid gap-6 mb-8 ${
+                  viewMode === 'grid'
+                    ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
+                    : 'grid-cols-1'
+                }`}>
+                  {products.map((product) => (
+                    viewMode === 'grid' ? (
+                      <ProductCard key={product.id} product={product} />
+                    ) : (
+                      <ProductListItem key={product.id} product={product} />
+                    )
+                  ))}
+                </div>
+              )}
+
+              {/* Professional Pagination */}
+              {!loading && products.length > 0 && totalPages > 1 && (
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-6 border-t">
+                  <div className="text-sm text-muted-foreground">
+                    Page <span className="font-medium">{currentPage}</span> of <span className="font-medium">{totalPages}</span>
+                  </div>
+
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(1)}
+                      disabled={currentPage === 1}
+                    >
+                      First
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                      disabled={currentPage === 1}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+
+                    {/* Smart Page Numbers */}
+                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      let pageNum;
+                      if (totalPages <= 5) pageNum = i + 1;
+                      else if (currentPage <= 3) pageNum = i + 1;
+                      else if (currentPage >= totalPages - 2) pageNum = totalPages - 4 + i;
+                      else pageNum = currentPage - 2 + i;
+
+                      return (
+                        <Button
+                          key={pageNum}
+                          variant={currentPage === pageNum ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setCurrentPage(pageNum)}
+                          className="min-w-[36px]"
+                        >
+                          {pageNum}
+                        </Button>
+                      );
+                    })}
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                      disabled={currentPage === totalPages}
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(totalPages)}
+                      disabled={currentPage === totalPages}
+                    >
+                      Last
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </section>
     </div>

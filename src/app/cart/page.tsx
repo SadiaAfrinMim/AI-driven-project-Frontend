@@ -80,7 +80,7 @@ export default function CartPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-sky-50">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
@@ -147,7 +147,7 @@ export default function CartPage() {
                     <div className="flex-1 flex flex-col justify-between">
                       <div>
                         <h3 className="font-semibold text-lg text-gray-900 line-clamp-2">{item.title}</h3>
-                        <p className="text-emerald-600 font-bold mt-1">৳{item.price.toLocaleString()} each</p>
+                        <p className="text-sky-600 font-bold mt-1">৳{item.price.toLocaleString()} each</p>
                       </div>
 
                       {/* Controls */}
@@ -171,7 +171,7 @@ export default function CartPage() {
                         <div className="flex items-center gap-4">
                           <div className="text-right">
                             <div className="text-sm text-gray-500">Subtotal</div>
-                            <div className="font-bold text-xl text-emerald-600">
+                            <div className="font-bold text-xl text-sky-600">
                               ৳{(item.price * item.quantity).toLocaleString()}
                             </div>
                           </div>
@@ -210,14 +210,14 @@ export default function CartPage() {
 
                   <div className="pt-4 border-t flex justify-between items-baseline">
                     <span className="text-lg font-semibold text-gray-900">Total</span>
-                    <span className="text-3xl font-bold text-emerald-600">৳{total.toLocaleString()}</span>
+                    <span className="text-3xl font-bold text-sky-600">৳{total.toLocaleString()}</span>
                   </div>
 
                   <div className="pt-2 space-y-3">
                     <Button
                       onClick={handlePlaceAllOrders}
                       disabled={placing || cartItems.length === 0}
-                      className="w-full h-12 text-base bg-emerald-600 hover:bg-emerald-700 font-semibold"
+                      className="w-full h-12 text-base bg-sky-600 hover:bg-sky-700 font-semibold"
                     >
                       {placing ? 'Placing Orders...' : 'Place Order for All Items'}
                     </Button>

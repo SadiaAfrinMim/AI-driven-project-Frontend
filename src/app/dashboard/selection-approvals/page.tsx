@@ -89,13 +89,13 @@ export default function SelectionApprovalsPage() {
       />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Card className="border-0 bg-gradient-to-br from-amber-50 to-white shadow-sm">
+        <Card className="border-0 bg-sky-50 shadow-sm">
           <CardContent className="p-5">
             <p className="text-sm text-muted-foreground">Pending Requests</p>
             <p className="mt-2 text-3xl font-bold text-amber-600">{pendingSelections.length}</p>
           </CardContent>
         </Card>
-        <Card className="border-0 bg-gradient-to-br from-emerald-50 to-white shadow-sm">
+        <Card className="border-0 bg-sky-50 shadow-sm">
           <CardContent className="p-5">
             <p className="text-sm text-muted-foreground flex items-center gap-1"><Check className="h-4 w-4" /> Tip</p>
             <p className="mt-1 text-sm text-emerald-700">Approved selections appear as cards in user's Profile → My Approved Selections</p>

@@ -89,7 +89,7 @@ export function Sidebar({ user, onLogout }: SidebarProps) {
       `}>
         <div className="flex flex-col h-full">
           {/* Logo Section */}
-          <div className="flex items-center justify-between h-16 px-6 bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-700 text-white shadow-lg">
+          <div className="flex items-center justify-between h-16 px-6 bg-sky-600 text-white shadow-lg">
             <div className="flex items-center space-x-3">
               <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
                 <Bot className="h-5 w-5" />
@@ -109,7 +109,7 @@ export function Sidebar({ user, onLogout }: SidebarProps) {
           </div>
 
           {/* User Profile Section */}
-          <div className="px-4 py-5 bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200/50">
+          <div className="px-4 py-5 bg-sky-50 border-b border-gray-200/50">
             <div className="flex items-center space-x-3">
               {freshUser.profileImage ? (
                 <img
@@ -118,7 +118,7 @@ export function Sidebar({ user, onLogout }: SidebarProps) {
                   className="h-10 w-10 rounded-xl border-2 border-white shadow-md"
                 />
               ) : (
-                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 flex items-center justify-center shadow-md">
+                <div className="h-10 w-10 rounded-xl bg-sky-600 flex items-center justify-center shadow-md">
                   <span className="text-white font-bold text-sm">
                     {freshUser.name.charAt(0).toUpperCase()}
                   </span>
@@ -148,8 +148,8 @@ export function Sidebar({ user, onLogout }: SidebarProps) {
                     className={`
                       group flex items-center px-4 py-3 rounded-xl text-sm font-medium transition-all duration-300 relative overflow-hidden
                       ${isActive
-                        ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg shadow-blue-500/25 transform scale-[1.02]'
-                        : 'text-gray-700 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 hover:text-blue-700 hover:shadow-md hover:transform hover:scale-[1.01]'
+                        ? 'bg-sky-600 text-white shadow-lg shadow-sky-500/25 transform scale-[1.02]'
+                        : 'text-gray-700 hover:bg-sky-100 hover:text-sky-700 hover:shadow-md hover:transform hover:scale-[1.01]'
                       }
                     `}
                     onClick={() => setIsOpen(false)}

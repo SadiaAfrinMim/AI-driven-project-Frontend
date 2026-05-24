@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { api, fetchApi } from '@/lib/api';
-import { Package, Clock, CheckCircle, XCircle, Calendar, MapPin } from 'lucide-react';
+import { Package, Clock, CheckCircle, XCircle, Calendar, MapPin, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface Selection {
   id: string;
@@ -34,11 +34,16 @@ export default function MyOrdersPage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'>('ALL');
 
+  // Client-side pagination
+  const itemsPerPage = 9;
+  const [currentPage, setCurrentPage] = useState(1);
+
   const fetchMyOrders = async () => {
     setLoading(true);
     try {
       const res = await fetchApi(api.mySelections);
-      const list = res?.data?.selections || res?.selections || [];
+      // Backend returns { data: { selections: [...] } } for /my-selections
+      const list = res?.data?.selections || res?.data || res?.selections || [];
       setSelections(Array.isArray(list) ? list : []);
     } catch (e) {
       console.error('Failed to load your orders:', e);
@@ -63,6 +68,11 @@ export default function MyOrdersPage() {
     REJECTED: selections.filter((s) => s.status === 'REJECTED').length,
   };
 
+  // Paginated data for current filter
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedOrders = filtered.slice(startIndex, startIndex + itemsPerPage);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / itemsPerPage));
+
   return (
     <div className="space-y-6">
       <DashboardHeader
@@ -79,7 +89,10 @@ export default function MyOrdersPage() {
               key={key}
               variant={active ? 'default' : 'outline'}
               size="sm"
-              onClick={() => setFilter(key)}
+              onClick={() => {
+                setFilter(key);
+                setCurrentPage(1); // reset pagination when changing filter
+              }}
               className="rounded-full"
             >
               {key === 'ALL' ? 'All Orders' : key.charAt(0) + key.slice(1).toLowerCase()}
@@ -111,8 +124,9 @@ export default function MyOrdersPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {filtered.map((order) => {
+        <div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {paginatedOrders.map((order) => {
             const item = order.item;
             const cfg = statusConfig[order.status];
             const StatusIcon = cfg.icon;
@@ -192,6 +206,72 @@ export default function MyOrdersPage() {
               </Card>
             );
           })}
+          </div>
+
+          {/* Professional Pagination */}
+          {totalPages > 1 && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-6 mt-6 border-t">
+              <div className="text-sm text-muted-foreground">
+                Showing <span className="font-medium">{startIndex + 1}</span> - <span className="font-medium">{Math.min(startIndex + itemsPerPage, filtered.length)}</span> of <span className="font-medium">{filtered.length}</span> orders
+              </div>
+
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(1)}
+                  disabled={currentPage === 1}
+                >
+                  First
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  let pageNum;
+                  if (totalPages <= 5) pageNum = i + 1;
+                  else if (currentPage <= 3) pageNum = i + 1;
+                  else if (currentPage >= totalPages - 2) pageNum = totalPages - 4 + i;
+                  else pageNum = currentPage - 2 + i;
+
+                  return (
+                    <Button
+                      key={pageNum}
+                      variant={currentPage === pageNum ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setCurrentPage(pageNum)}
+                      className="min-w-[36px]"
+                    >
+                      {pageNum}
+                    </Button>
+                  );
+                })}
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                  disabled={currentPage === totalPages}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(totalPages)}
+                  disabled={currentPage === totalPages}
+                >
+                  Last
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

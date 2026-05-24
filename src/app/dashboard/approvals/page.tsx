@@ -118,19 +118,19 @@ export default function ApprovalsPage() {
 
       {/* Sky-blue themed stats */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Card className="border border-sky-200 bg-gradient-to-br from-sky-50 to-white shadow-sm hover:shadow-md transition-shadow">
+        <Card className="border border-sky-200 bg-sky-50 shadow-sm hover:shadow-md transition-shadow">
           <CardContent className="p-5">
             <p className="text-sm text-sky-600 font-medium">Pending Review</p>
             <p className="mt-2 text-3xl font-bold text-sky-900">{pendingItems.length}</p>
           </CardContent>
         </Card>
-        <Card className="border border-sky-200 bg-gradient-to-br from-sky-50 to-white shadow-sm hover:shadow-md transition-shadow">
+        <Card className="border border-sky-200 bg-sky-50 shadow-sm hover:shadow-md transition-shadow">
           <CardContent className="p-5">
             <p className="text-sm text-sky-600 font-medium">Approved Visible Items</p>
             <p className="mt-2 text-3xl font-bold text-sky-900">{approvedItems.length}</p>
           </CardContent>
         </Card>
-        <Card className="border border-sky-200 bg-gradient-to-br from-sky-50 to-white shadow-sm hover:shadow-md transition-shadow">
+        <Card className="border border-sky-200 bg-sky-50 shadow-sm hover:shadow-md transition-shadow">
           <CardContent className="flex h-full items-center justify-between gap-4 p-5">
             <div>
               <p className="text-sm text-sky-600 font-medium">Need a refresh?</p>
@@ -146,7 +146,7 @@ export default function ApprovalsPage() {
             </Button>
           </CardContent>
         </Card>
-        <Card className="border border-sky-200 bg-gradient-to-br from-sky-50 to-white shadow-sm hover:shadow-md transition-shadow">
+        <Card className="border border-sky-200 bg-sky-50 shadow-sm hover:shadow-md transition-shadow">
           <CardContent className="p-5">
             <p className="text-sm text-sky-600 font-medium">Rejected Items</p>
             <p className="mt-2 text-3xl font-bold text-sky-900">{rejectedItems.length}</p>
@@ -200,7 +200,7 @@ export default function ApprovalsPage() {
                             className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300" 
                           />
                         ) : (
-                          <div className="flex h-full items-center justify-center bg-gradient-to-br from-sky-100 to-white text-sky-400">
+                          <div className="flex h-full items-center justify-center bg-sky-100 text-sky-400">
                             <div className="text-center">
                               <div className="text-4xl mb-1">📦</div>
                               <div className="text-xs">No image</div>
@@ -301,7 +301,7 @@ export default function ApprovalsPage() {
                       {item.images?.[0] ? (
                         <img src={item.images[0]} alt={item.title} className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300" />
                       ) : (
-                        <div className="flex h-full items-center justify-center bg-gradient-to-br from-sky-100 to-white text-sky-400">
+                        <div className="flex h-full items-center justify-center bg-sky-100 text-sky-400">
                           <div className="text-center">
                             <div className="text-3xl mb-1">📦</div>
                             <div className="text-xs">No image</div>
@@ -361,7 +361,7 @@ export default function ApprovalsPage() {
                       {item.images?.[0] ? (
                         <img src={item.images[0]} alt={item.title} className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300 grayscale-[0.3]" />
                       ) : (
-                        <div className="flex h-full items-center justify-center bg-gradient-to-br from-sky-100 to-white text-sky-400">
+                        <div className="flex h-full items-center justify-center bg-sky-100 text-sky-400">
                           <div className="text-center">
                             <div className="text-3xl mb-1">📦</div>
                             <div className="text-xs">No image</div>

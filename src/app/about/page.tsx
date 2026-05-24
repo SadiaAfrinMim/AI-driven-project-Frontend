@@ -68,7 +68,7 @@ export default function AboutPage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Hero Section */}
-      <section className="relative py-20 bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-blue-900">
+      <section className="relative py-20 bg-sky-50 dark:bg-gray-900">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-4xl mx-auto">
             <Badge variant="secondary" className="mb-4">
@@ -104,7 +104,7 @@ export default function AboutPage() {
               </div>
             </div>
             <div className="relative">
-              <div className="bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900/20 dark:to-purple-900/20 rounded-2xl p-8">
+              <div className="bg-sky-100 dark:bg-sky-900 rounded-2xl p-8">
                 <Bot className="h-16 w-16 text-primary mx-auto mb-4" />
                 <h3 className="text-xl font-semibold text-center mb-2">AI-Powered Intelligence</h3>
                 <p className="text-muted-foreground text-center">
@@ -170,7 +170,7 @@ export default function AboutPage() {
             {team.map((member, index) => (
               <Card key={index} className="text-center hover:shadow-lg transition-shadow">
                 <CardHeader>
-                  <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center mx-auto mb-4 text-white text-xl font-bold">
+                  <div className="w-20 h-20 bg-sky-600 rounded-full flex items-center justify-center mx-auto mb-4 text-white text-xl font-bold">
                     {member.avatar}
                   </div>
                   <CardTitle className="text-lg">{member.name}</CardTitle>

@@ -99,18 +99,18 @@ export function Navbar() {
   return (
     <nav suppressHydrationWarning className={`sticky top-0 z-50 transition-all duration-300 ${
       isDashboard
-        ? 'bg-white/95 backdrop-blur-2xl border-b border-gray-200/80 shadow-sm'
-        : 'bg-white/95 backdrop-blur-xl border-b border-gray-200 shadow-sm'
+        ? 'bg-blue-50/95 backdrop-blur-2xl border-b border-blue-200/80 shadow-sm'
+        : 'bg-blue-50/95 backdrop-blur-xl border-b border-blue-200 shadow-sm'
     }`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-3 group">
-            <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-gradient-to-br from-blue-600 to-purple-600 shadow-lg group-hover:scale-105 transition-transform">
+            <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-sky-600 shadow-lg group-hover:scale-105 transition-transform">
               <Bot className="h-5 w-5 text-white" />
             </div>
             <div>
-              <span className="text-xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
+              <span className="text-xl font-bold text-gray-900">
                 AI Suggester
               </span>
             </div>
@@ -208,7 +208,7 @@ export function Navbar() {
                         setIsCartOpen(!isCartOpen);
                         setIsProfileDropdownOpen(false);
                       }}
-                      className="relative p-2.5 rounded-xl hover:bg-sky-50 active:bg-sky-100 transition-all border border-sky-200 text-sky-700 hover:text-sky-800"
+                      className="relative p-2.5 rounded-xl hover:bg-blue-100 active:bg-blue-200 transition-all border border-blue-300 text-blue-700 hover:text-blue-800"
                       aria-label="Shopping Cart"
                     >
                       <ShoppingCart className="h-5 w-5" />
@@ -219,21 +219,21 @@ export function Navbar() {
                       )}
                     </button>
 
-                    {/* Beautiful Cart Dropdown */}
-                    {isCartOpen && (
-                      <div className="absolute right-0 mt-3 w-80 bg-white rounded-2xl shadow-2xl border border-sky-200 z-50 overflow-hidden">
-                        <div className="px-4 py-3 bg-gradient-to-r from-sky-50 to-white border-b flex items-center justify-between">
+                      {/* Beautiful Cart Dropdown - Blue theme */}
+                      {isCartOpen && (
+                        <div className="absolute right-0 mt-3 w-80 bg-white rounded-2xl shadow-2xl border border-blue-200 z-50 overflow-hidden">
+                        <div className="px-4 py-3 bg-sky-100 border-b flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            <ShoppingCart className="h-4 w-4 text-sky-600" />
-                            <span className="font-semibold text-sky-900">Your Cart</span>
+                            <ShoppingCart className="h-4 w-4 text-blue-700" />
+                            <span className="font-semibold text-blue-900">Your Cart</span>
                           </div>
-                          <button onClick={() => setIsCartOpen(false)} className="text-sky-400 hover:text-sky-600">
+                          <button onClick={() => setIsCartOpen(false)} className="text-blue-500 hover:text-blue-700">
                             <X className="h-4 w-4" />
                           </button>
                         </div>
 
                         {cartItems.length === 0 ? (
-                          <div className="p-8 text-center text-sm text-sky-600">
+                           <div className="p-8 text-center text-sm text-blue-700">
                             Your cart is empty.<br />Add products from the product pages.
                           </div>
                         ) : (
@@ -306,7 +306,7 @@ export function Navbar() {
                                     setIsCartOpen(false);
                                     router.push('/cart');
                                   }}
-                                  className="flex-1 py-2.5 text-sm font-semibold rounded-xl border border-sky-300 text-sky-700 hover:bg-white active:bg-white"
+                                   className="flex-1 py-2.5 text-sm font-semibold rounded-xl border border-blue-300 text-blue-700 hover:bg-blue-100 active:bg-white"
                                 >
                                   View Full Cart
                                 </button>
@@ -336,12 +336,12 @@ export function Navbar() {
                                       toast.error(err?.message || 'Failed to place some orders');
                                     }
                                   }}
-                                  className="flex-1 py-2.5 text-sm font-semibold rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white"
+                                   className="flex-1 py-2.5 text-sm font-semibold rounded-xl bg-blue-600 hover:bg-blue-700 text-white"
                                 >
                                   Place Order
                                 </button>
                               </div>
-                              <p className="text-[10px] text-center text-sky-500 mt-2">Placing order will create requests for manager approval</p>
+                               <p className="text-[10px] text-center text-blue-500 mt-2">Placing order will create requests for manager approval</p>
                             </div>
                           </>
                         )}
@@ -356,16 +356,16 @@ export function Navbar() {
                         setIsProfileDropdownOpen(!isProfileDropdownOpen);
                         setIsCartOpen(false);
                       }}
-                      className="flex items-center gap-3 rounded-full pl-1.5 pr-4 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all active:scale-[0.985]"
+                      className="flex items-center gap-3 rounded-full pl-1.5 pr-4 py-1.5 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-all active:scale-[0.985]"
                     >
                       {freshUser.profileImage ? (
                         <img
                           src={freshUser.profileImage}
                           alt={freshUser.name}
-                          className="h-9 w-9 rounded-full ring-2 ring-blue-100 dark:ring-blue-900"
+                          className="h-9 w-9 rounded-full ring-2 ring-blue-200 dark:ring-blue-700 object-cover"
                         />
                       ) : (
-                        <div className="h-9 w-9 rounded-full bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 flex items-center justify-center ring-2 ring-blue-100 dark:ring-blue-900">
+                        <div className="h-9 w-9 rounded-full bg-sky-600 flex items-center justify-center ring-2 ring-sky-200 dark:ring-sky-700">
                           <span className="text-white font-bold text-sm tracking-tight">
                             {freshUser.name.charAt(0).toUpperCase()}
                           </span>
@@ -382,11 +382,11 @@ export function Navbar() {
 
                     {/* Professional Dropdown Menu */}
                     {isProfileDropdownOpen && (
-                  <div 
-                    className="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-900 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-800 py-2 z-50"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <div className="px-4 py-3 border-b">
+                   <div 
+                     className="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-900 rounded-xl shadow-2xl border border-blue-200 dark:border-blue-800 py-2 z-50"
+                     onClick={(e) => e.stopPropagation()}
+                   >
+                     <div className="px-4 py-3 border-b bg-blue-50 dark:bg-blue-900/30">
                       <p className="font-semibold text-sm">{freshUser.name}</p>
                       <p className="text-xs text-muted-foreground truncate">{freshUser.email}</p>
                       <div className="mt-1.5">

@@ -15,8 +15,9 @@ export function getApiBaseUrl() {
       return 'http://localhost:5000/api/v1';
     }
 
-    // Deployed (Vercel, etc.) → use live Render backend
-    return 'https://ai-driven-backend.onrender.com/api/v1';
+    // Deployed (Vercel, etc.) → use your current backend
+    // IMPORTANT: Update this to your latest deployed backend URL after you deploy the backend
+    return 'https://backend-lime-three-30.vercel.app/api/v1';
   }
 
   // 3. Server-side rendering (Next.js SSR / build time)
@@ -24,7 +25,7 @@ export function getApiBaseUrl() {
     return 'http://localhost:5000/api/v1';
   }
 
-  return 'https://ai-driven-backend.onrender.com/api/v1';
+  return 'https://backend-lime-three-30.vercel.app/api/v1';
 }
 
 const API_BASE_URL = getApiBaseUrl();
@@ -55,6 +56,7 @@ export const api = {
     analyzeSentiment: `${API_BASE_URL}/ai/analyze-sentiment`,
     generateReview: `${API_BASE_URL}/ai/generate-review`,
     recommendations: `${API_BASE_URL}/ai/recommendations`,
+    command: `${API_BASE_URL}/ai/command`,   // NEW: Natural language AI commands ("write a review for X", "generate description", etc.)
   },
   selections: `${API_BASE_URL}/selections`,
   mySelections: `${API_BASE_URL}/selections/my-selections`,

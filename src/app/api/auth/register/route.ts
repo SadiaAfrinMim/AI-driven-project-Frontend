@@ -19,7 +19,7 @@ const users: User[] = [];
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, email, password, role, bio, profileImage } = body;
+    const { name, email, password } = body;
 
     // Validate required fields
     if (!name || !email || !password) {
@@ -38,10 +38,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate role
-    const validRoles = ['USER', 'ADMIN', 'MANAGER'];
-    const userRole = validRoles.includes(role) ? role : 'USER';
-
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -51,9 +47,9 @@ export async function POST(request: NextRequest) {
       name,
       email,
       password: hashedPassword,
-      role: userRole,
-      bio: bio || '',
-      profileImage: profileImage || '',
+      role: 'USER' as const,
+      bio: '',
+      profileImage: '',
       createdAt: new Date().toISOString(),
     };
 
