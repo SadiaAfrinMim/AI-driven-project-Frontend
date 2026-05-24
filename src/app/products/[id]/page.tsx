@@ -305,7 +305,7 @@ export default function ProductDetailsPage() {
       <Star
         key={i}
         className={`${starSize} ${
-          i < rating ? 'text-yellow-400 fill-current' : 'text-gray-300'
+          i < rating ? 'text-sky-400 fill-current' : 'text-sky-300'
         }`}
       />
     ));
@@ -468,7 +468,7 @@ export default function ProductDetailsPage() {
                  <div className="mb-3 flex items-center justify-between bg-white border border-sky-200 rounded-2xl px-4 py-3">
                    <div>
                      <div className="text-xs text-sky-600 font-medium">How many do you need?</div>
-                     <div className="text-sm text-gray-500">Max available: {product?.quantity}</div>
+                      <div className="text-sm text-sky-500">Max available: {product?.quantity}</div>
                    </div>
 
                    <div className="flex items-center gap-2">
@@ -661,34 +661,7 @@ export default function ProductDetailsPage() {
           </div>
         </div>
 
-        {/* NEW: Powerful AI Command Bar - "Just tell AI what to do" */}
-        <div className="mb-12">
-          <Card className="border-sky-200 shadow-sm bg-white">
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-sky-700">
-                <Sparkles className="h-5 w-5" />
-                AI Command Center
-                <span className="text-xs font-normal text-sky-500 ml-2">(Type anything — AI will generate it)</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <AICommandBar 
-                context={product.title} 
-                placeholder={`Tell AI what to do for "${product.title}" (e.g. write a 5 star review, generate better description, suggest tags)`}
-                onResult={(result) => {
-                  // If AI generated a review, we can optionally refresh reviews
-                  if (result?.action === 'generate-review') {
-                    // User can still manually use the ReviewForm, or we can auto-fill it in future
-                    toast.info('AI generated a review above — you can copy it or use the review form below');
-                  }
-                }}
-              />
-              <p className="text-[11px] text-muted-foreground mt-3">
-                Examples: "write a 5-star review", "generate a premium description", "suggest 5 tags", "make the title more catchy"
-              </p>
-            </CardContent>
-          </Card>
-        </div>
+      
 
         {/* Reviews Section */}
         <div className="mb-12">
@@ -775,11 +748,11 @@ export default function ProductDetailsPage() {
               )}
 
               {/* 2. Community Reviews */}
-              <div>
-                <div className="flex items-center gap-2 mb-4">
-                  <span className="text-sm font-semibold text-gray-600">Reviews for this product</span>
-                  <div className="h-px flex-1 bg-gray-200" />
-                </div>
+                <div>
+                  <div className="flex items-center gap-2 mb-4">
+                    <span className="text-sm font-semibold text-sky-600">Reviews for this product</span>
+                    <div className="h-px flex-1 bg-sky-200" />
+                  </div>
 
                 {reviews.length > 0 ? (
                   <div className="space-y-6">
@@ -800,7 +773,7 @@ export default function ProductDetailsPage() {
                           <p className="text-xs text-muted-foreground mb-2">
                             {new Date(review.createdAt).toLocaleDateString()}
                           </p>
-                          <p className="text-gray-600 leading-relaxed">{review.comment}</p>
+                           <p className="text-sky-600 leading-relaxed">{review.comment}</p>
                         </div>
                       </div>
                     ))}
@@ -838,7 +811,7 @@ export default function ProductDetailsPage() {
                   className="group flex flex-col h-full border border-sky-200 rounded-2xl overflow-hidden hover:border-sky-300 hover:shadow-lg transition-all bg-white"
                 >
                   {/* Image - taller and better proportion */}
-                  <div className="relative aspect-square bg-slate-100 flex-shrink-0 overflow-hidden">
+                  <div className="relative aspect-square bg-sky-100 flex-shrink-0 overflow-hidden">
                     {relatedProduct.images?.[0] ? (
                       <img
                         src={relatedProduct.images[0]}
@@ -846,15 +819,15 @@ export default function ProductDetailsPage() {
                         className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-300"
                       />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-slate-100">
-                        <Package className="h-9 w-9 text-slate-400" />
+                      <div className="w-full h-full flex items-center justify-center bg-sky-100">
+                        <Package className="h-9 w-9 text-sky-400" />
                       </div>
                     )}
                   </div>
 
                   {/* Content */}
                   <CardContent className="p-3 flex flex-col flex-1">
-                    <h3 className="font-semibold text-[13.5px] leading-tight text-gray-900 line-clamp-2 mb-1.5 group-hover:text-sky-600 transition-colors">
+                    <h3 className="font-semibold text-[13.5px] leading-tight text-sky-900 line-clamp-2 mb-1.5 group-hover:text-sky-600 transition-colors">
                       {relatedProduct.title}
                     </h3>
 
@@ -862,7 +835,7 @@ export default function ProductDetailsPage() {
                       <span className="text-lg font-bold text-sky-600 tracking-tight">
                         ৳{Number(relatedProduct.price).toLocaleString()}
                       </span>
-                      <div className="flex items-center text-amber-500">
+                      <div className="flex items-center text-sky-500">
                         {renderStars(Math.floor(relatedProduct.rating), 'sm')}
                       </div>
                     </div>
