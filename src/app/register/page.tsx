@@ -194,27 +194,18 @@ async function quickRegister(role: 'USER' | 'MANAGER' | 'ADMIN') {
   };
 
   try {
-    const response = await fetch('http://localhost:5000/api/v1/auth/register', {
+    const response = await fetchApi(api.auth.register, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(demoData[role])
     });
 
-    const result = await response.json();
+    Cookies.set('accessToken', response.data.accessToken, { expires: 7 });
+    Cookies.set('user', JSON.stringify(response.data.user), { expires: 7 });
+    Cookies.set('role', response.data.user.role, { expires: 7 });
 
-    if (response.ok) {
-      // Store tokens
-      const Cookies = (await import('js-cookie')).default;
-      Cookies.set('accessToken', result.data.accessToken, { expires: 7 });
-      Cookies.set('user', JSON.stringify(result.data.user), { expires: 7 });
-      Cookies.set('role', result.data.user.role, { expires: 7 });
-
-      window.location.href = '/dashboard';
-    } else {
-      alert(result.message || 'Registration failed');
-    }
-  } catch (error) {
-    alert('Failed to register. Make sure backend is running on port 5000');
+    window.location.href = '/dashboard';
+  } catch (error: any) {
+    alert(error?.message || 'Failed to register demo account');
   }
 }
 
