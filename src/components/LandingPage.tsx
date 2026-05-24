@@ -63,10 +63,6 @@ export default function LandingPage() {
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [featuredProducts, setFeaturedProducts] = useState<ProductCard[]>([]);
 
-  const shouldRedirect =
-    typeof document !== 'undefined' &&
-    Boolean(Cookies.get('accessToken') && Cookies.get('user'));
-
   const runConcierge = async () => {
     try {
       setLoading(true);
@@ -108,26 +104,12 @@ export default function LandingPage() {
   };
 
   useEffect(() => {
-    if (shouldRedirect) {
-      router.push('/dashboard');
-    }
-  }, [router, shouldRedirect]);
-
-  useEffect(() => {
     const loadInitialData = async () => {
       await Promise.all([runConcierge(), loadFeaturedProducts()]);
     };
 
     void loadInitialData();
   }, []);
-
-  if (typeof document === 'undefined' || shouldRedirect) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="h-12 w-12 animate-spin rounded-full border-2 border-primary/20 border-t-primary" />
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,_rgba(246,189,96,0.18),_transparent_30%),radial-gradient(circle_at_top_right,_rgba(69,123,157,0.16),_transparent_28%),linear-gradient(180deg,_rgba(255,251,245,1),_rgba(247,245,239,1))]">

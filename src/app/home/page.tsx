@@ -1,7 +1,5 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -17,47 +15,8 @@ import {
   Shield,
   Zap
 } from 'lucide-react';
-import Cookies from 'js-cookie';
-
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  role: 'USER' | 'ADMIN' | 'MANAGER';
-  profileImage?: string;
-  bio?: string;
-}
 
 export default function HomePage() {
-  const [user, setUser] = useState<User | null>(null);
-  const router = useRouter();
-
-  useEffect(() => {
-    // Check authentication
-    const accessToken = Cookies.get('accessToken');
-    const userData = Cookies.get('user');
-
-    if (!accessToken || !userData) {
-      router.push('/login');
-      return;
-    }
-
-    try {
-      const parsedUser = JSON.parse(userData);
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setUser(parsedUser);
-    } catch {
-      router.push('/login');
-    }
-  }, [router]);
-
-  if (!user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
 
   const features = [
     {
@@ -113,10 +72,7 @@ export default function HomePage() {
           <div className="flex justify-center mb-8">
             <div className="flex items-center space-x-3 bg-white px-6 py-3 rounded-full shadow-lg">
               <Bot className="h-8 w-8 text-blue-600" />
-              <span className="text-lg font-semibold text-gray-900">Welcome back, {user.name}!</span>
-              <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-                {user.role}
-              </Badge>
+              <span className="text-lg font-semibold text-gray-900">Welcome to AI Product Suggester</span>
             </div>
           </div>
 
