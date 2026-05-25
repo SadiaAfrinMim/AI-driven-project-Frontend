@@ -1,36 +1,135 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# AI Suggester
 
-## Getting Started
+**AI-Powered Product Recommendation & Marketplace Platform**
 
-First, run the development server:
+A modern full-stack platform that uses **intelligent AI** to help users discover the right products easily. 
+
+Just select a category (or type a description) → Get highly relevant recommendations powered by smart Title + Category matching.
+
+🔗 **Live Demo**: [https://ai-project-flax-ten.vercel.app](https://ai-project-flax-ten.vercel.app)
+
+---
+
+## ✨ Key Features
+
+### 🤖 Intelligent AI Recommendations (Our Strongest Feature)
+- **Category-First AI**: Simply select any category from the dropdown and get relevant products instantly — **no query needed**
+- **Smart Title Matching**: When you type something, the AI gives **top priority** to products whose titles best match your words (within the selected category)
+- **Two Smart Quick Sections** (auto-updated with category):
+  - **Top Rated in Category** — Highest rated products from your chosen category
+  - **New Arrivals in Category** — Latest products added in that category
+- Clean & Controlled: Suggestions only appear when you click **Generate Suggestions**
+
+### 🛍️ Complete Marketplace Experience
+- Modern product browsing with filters and search
+- Detailed product pages with real customer reviews
+- Shopping cart + one-click "Buy Now" functionality
+- Product selection system with Manager/Admin approval flow
+
+### 👥 Role-Based Platform
+- **Regular Users**: Browse, review products, manage profile & cart
+- **Managers**: Approve user selections, manage inventory
+- **Admins**: Full control over users, roles, and content
+
+### 👤 Excellent User Experience
+- Beautiful profile with **Cloudinary** image upload (updates live in Navbar)
+- Write reviews manually or let AI generate them for you
+- Fully responsive design — works perfectly on mobile, tablet & desktop
+
+### 🧠 Powerful AI Tools
+- AI-generated reviews
+- Smart content generation (title, description, tags)
+- Natural language AI commands
+- Multiple backend AI services
+
+### 🎨 Modern & Polished Design
+- Clean UI built with Tailwind + shadcn/ui
+- Highly responsive Navbar with beautiful animated dropdowns
+- Smooth interactions and professional feel throughout
+
+---
+
+## 🛠️ Tech Stack
+
+**Frontend**
+- Next.js 16 (App Router)
+- TypeScript
+- Tailwind CSS + shadcn/ui
+- React Hook Form + Zod
+
+**Backend**
+- Node.js + Express
+- Prisma + PostgreSQL
+- Cloudinary (image uploads)
+- JWT Authentication
+
+**AI Integration**
+- Custom AI service with multiple providers
+- Smart scoring system (Title + Category as top priority)
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+- Node.js 18+
+- PostgreSQL
+- Cloudinary account (for image uploads)
+
+### Installation
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# Clone the repo
+git clone <your-repo-url>
+cd Ai-product-suggestion
+
+# Install dependencies
+cd frontend && npm install
+cd ../backend && npm install
+
+# Setup environment variables
+# Copy .env.example and fill in values
+
+# Run database migrations
+cd backend && npx prisma migrate dev
+
+# Start development servers
+# Terminal 1
+cd frontend && npm run dev
+
+# Terminal 2
+cd backend && npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 📌 Important Notes
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- AI Recommendations are **category-first**:
+  - When you select a category from the dropdown, only products from that category are shown.
+  - Title matching is used for extra relevance when a query is provided.
+- The system works even without typing a query — just select a category and click **Generate Suggestions**.
 
-## Learn More
+---
 
-To learn more about Next.js, take a look at the following resources:
+## 📸 Screenshots
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+> (Add screenshots of homepage AI section, product listing, profile, etc.)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+---
 
-## Deploy on Vercel
+## 🤝 Contributing
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Contributions are welcome! Please open an issue or submit a pull request.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+
+## 📄 License
+
+This project is licensed under the MIT License.
+
+---
+
+**Built with ❤️ using Next.js and AI**
+
+If you like this project, consider giving it a ⭐ on GitHub!
