@@ -49,19 +49,36 @@ type ProductCard = {
   rating: number;
   reviewCount: number;
   images: string[];
+  createdAt?: string;
 };
 
-const categories = ['electronics', 'fashion', 'home', 'beauty', 'books', 'fitness'];
+// Exact same categories as used in /products page and Add Item form (hubahu)
+const categories = [
+  'Electronics',
+  'Fashion',
+  'Home & Living',
+  'Beauty',
+  'Sports & Outdoors',
+  'Books',
+  'Toys & Games',
+  'Health & Wellness',
+  'Automotive',
+  'Food & Grocery',
+];
 
 export default function LandingPage() {
   const router = useRouter();
-  const [query, setQuery] = useState('A sleek product for work and travel');
+  const [query, setQuery] = useState('');
   const [budget, setBudget] = useState('150');
-  const [category, setCategory] = useState('electronics');
+  const [category, setCategory] = useState('Electronics');
   const [vibe, setVibe] = useState('premium');
   const [loading, setLoading] = useState(false);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [featuredProducts, setFeaturedProducts] = useState<ProductCard[]>([]);
+
+  // Two new relevant quick-pick sections based on selected category
+  const [topRatedInCategory, setTopRatedInCategory] = useState<ProductCard[]>([]);
+  const [newInCategory, setNewInCategory] = useState<ProductCard[]>([]);
 
   const runConcierge = async () => {
     try {
@@ -84,7 +101,31 @@ export default function LandingPage() {
       }
 
       const data = await response.json();
-      setSuggestions(data.suggestions || []);
+      let aiSuggestions = data.suggestions || [];
+
+      // Fallback: If AI returns nothing (e.g. no strong title match in category),
+      // show the relevant category products we already loaded as recommendations.
+      if (aiSuggestions.length === 0 && (topRatedInCategory.length > 0 || newInCategory.length > 0)) {
+        const combined = [...topRatedInCategory, ...newInCategory]
+          .slice(0, 6)
+          .map(p => ({
+            itemId: p.id,
+            title: p.title,
+            description: p.description?.slice(0, 120) || '',
+            price: p.price,
+            category: p.category,
+            location: p.location || '',
+            image: p.images?.[0] || null,
+            avgRating: p.rating || 0,
+            reviewCount: p.reviewCount || 0,
+            tags: [],
+            score: 75,
+            reason: `Popular in ${p.category} category`,
+          }));
+        aiSuggestions = combined;
+      }
+
+      setSuggestions(aiSuggestions);
     } catch (error) {
       console.error(error);
       setSuggestions([]);
@@ -103,13 +144,41 @@ export default function LandingPage() {
     }
   };
 
-  useEffect(() => {
-    const loadInitialData = async () => {
-      await Promise.all([runConcierge(), loadFeaturedProducts()]);
-    };
+  // Load two relevant quick sections based on current category selection
+  const loadCategoryQuickPicks = async (cat: string) => {
+    if (!cat) return;
 
-    void loadInitialData();
+    try {
+      // Top Rated in this category
+      const topRatedRes = await fetchApi(
+        `${api.items}/approved?category=${encodeURIComponent(cat)}&sortBy=rating&sortOrder=desc&limit=4`
+      );
+      setTopRatedInCategory(topRatedRes.data?.items || []);
+
+      // New Arrivals in this category
+      const newRes = await fetchApi(
+        `${api.items}/approved?category=${encodeURIComponent(cat)}&sortBy=createdAt&sortOrder=desc&limit=4`
+      );
+      setNewInCategory(newRes.data?.items || []);
+    } catch (error) {
+      console.error('Failed to load category quick picks', error);
+      setTopRatedInCategory([]);
+      setNewInCategory([]);
+    }
+  };
+
+  useEffect(() => {
+    // Only load featured products on initial page load.
+    // AI recommendations should ONLY show after user clicks "Generate Suggestions" with a query.
+    loadFeaturedProducts();
   }, []);
+
+  // Whenever the category dropdown changes, load the two relevant sections
+  useEffect(() => {
+    if (category) {
+      loadCategoryQuickPicks(category);
+    }
+  }, [category]);
 
   return (
     <div className="min-h-screen overflow-hidden bg-sky-50">
@@ -198,60 +267,170 @@ export default function LandingPage() {
                   />
                 </div>
 
-                <Select value={category} onValueChange={(value) => setCategory(value || 'electronics')}>
+                <Select value={category} onValueChange={(value) => setCategory(value || 'Electronics')}>
                   <SelectTrigger className="h-12 w-full rounded-2xl bg-white px-4">
                     <SelectValue placeholder="Choose category" />
                   </SelectTrigger>
                   <SelectContent>
                     {categories.map((item) => (
                       <SelectItem key={item} value={item}>
-                        {item.charAt(0).toUpperCase() + item.slice(1)}
+                        {item}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
 
-                <Button onClick={() => void runConcierge()} disabled={loading} className="h-12 w-full rounded-2xl text-base">
+                <Button 
+                  onClick={() => void runConcierge()} 
+                  disabled={loading || (!query.trim() && !category)} 
+                  className="h-12 w-full rounded-2xl text-base"
+                >
                   {loading ? 'Thinking...' : 'Generate Suggestions'}
                 </Button>
               </div>
 
-              <div className="mt-6 space-y-3">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-semibold text-foreground">Suggested for you</p>
-                  <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
-                    {suggestions.length} results
-                  </p>
-                </div>
+              {/* AI Recommendations only appear after user clicks Generate with a query */}
+              {suggestions.length > 0 && (
+                <div className="mt-6 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-semibold text-foreground">Suggested for you</p>
+                    <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                      {suggestions.length} results
+                    </p>
+                  </div>
 
-                <div className="space-y-3">
-                  {suggestions.slice(0, 3).map((item) => (
-                    <div key={item.itemId} className="rounded-2xl border border-border/70 bg-background/70 p-4">
-                      <div className="mb-2 flex items-start justify-between gap-4">
-                        <div>
-                          <p className="font-semibold">{item.title}</p>
-                          <p className="mt-1 text-sm text-muted-foreground">{item.reason}</p>
+                  <div className="space-y-3">
+                    {suggestions.slice(0, 3).map((item) => (
+                      <div key={item.itemId} className="rounded-2xl border border-border/70 bg-background/70 p-4">
+                        <div className="mb-2 flex items-start justify-between gap-4">
+                          <div>
+                            <p className="font-semibold">{item.title}</p>
+                            <p className="mt-1 text-sm text-muted-foreground">{item.reason}</p>
+                          </div>
+                          <Badge variant="outline" className="rounded-full">
+                            {item.score}%
+                          </Badge>
                         </div>
-                        <Badge variant="outline" className="rounded-full">
-                          {item.score}%
-                        </Badge>
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="font-semibold text-primary">${item.price.toFixed(2)}</span>
+                          <span className="text-muted-foreground">{item.category}</span>
+                        </div>
                       </div>
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="font-semibold text-primary">${item.price.toFixed(2)}</span>
-                        <span className="text-muted-foreground">{item.category}</span>
-                      </div>
-                    </div>
-                  ))}
-
-                  {!loading && suggestions.length === 0 && (
-                    <div className="rounded-2xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-                      Add a query and budget to generate AI-powered recommendations.
-                    </div>
-                  )}
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {/* Placeholder message when no suggestions yet */}
+              {!loading && suggestions.length === 0 && (
+                <div className="mt-6 rounded-2xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+                  Select a category (or type a description) and click <span className="font-medium">"Generate Suggestions"</span> to get AI recommendations.
+                </div>
+              )}
             </CardContent>
           </Card>
+        </div>
+      </section>
+
+      {/* Two new relevant sections - dynamically tied to selected category */}
+      <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          
+          {/* Section 1: Top Rated in Selected Category */}
+          <div>
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary/80">Top Rated</p>
+                <h3 className="text-2xl font-bold tracking-tight">Best in {category}</h3>
+              </div>
+              <Link href={`/products?category=${encodeURIComponent(category)}`} className="text-sm text-primary hover:underline">
+                View all →
+              </Link>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {topRatedInCategory.length > 0 ? (
+                topRatedInCategory.map((product) => (
+                  <Link key={product.id} href={`/products/${product.id}`}>
+                    <Card className="h-full overflow-hidden border-sky-200 bg-white shadow-sm hover:shadow-md transition-all">
+                      <div className="aspect-video bg-sky-100">
+                        {product.images?.[0] ? (
+                          <img src={product.images[0]} alt={product.title} className="h-full w-full object-cover" />
+                        ) : (
+                          <div className="flex h-full items-center justify-center">
+                            <Package className="h-8 w-8 text-sky-400" />
+                          </div>
+                        )}
+                      </div>
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between mb-1">
+                          <Badge variant="secondary" className="text-xs">{product.category}</Badge>
+                          <div className="flex items-center text-sm text-amber-500">
+                            <Star className="h-3.5 w-3.5 mr-0.5 fill-current" />
+                            {Number(product.rating || 0).toFixed(1)}
+                          </div>
+                        </div>
+                        <h4 className="font-semibold text-sm line-clamp-2 mb-1">{product.title}</h4>
+                        <div className="text-lg font-bold text-sky-600">৳{Number(product.price).toLocaleString()}</div>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                ))
+              ) : (
+                <div className="col-span-2 text-sm text-muted-foreground p-4 border border-dashed rounded-xl">
+                  No products yet in this category.
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Section 2: New Arrivals in Selected Category */}
+          <div>
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary/80">Fresh Drops</p>
+                <h3 className="text-2xl font-bold tracking-tight">New in {category}</h3>
+              </div>
+              <Link href={`/products?category=${encodeURIComponent(category)}`} className="text-sm text-primary hover:underline">
+                View all →
+              </Link>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {newInCategory.length > 0 ? (
+                newInCategory.map((product) => (
+                  <Link key={product.id} href={`/products/${product.id}`}>
+                    <Card className="h-full overflow-hidden border-sky-200 bg-white shadow-sm hover:shadow-md transition-all">
+                      <div className="aspect-video bg-sky-100">
+                        {product.images?.[0] ? (
+                          <img src={product.images[0]} alt={product.title} className="h-full w-full object-cover" />
+                        ) : (
+                          <div className="flex h-full items-center justify-center">
+                            <Package className="h-8 w-8 text-sky-400" />
+                          </div>
+                        )}
+                      </div>
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between mb-1">
+                          <Badge variant="secondary" className="text-xs">{product.category}</Badge>
+                          <div className="text-xs text-muted-foreground">
+                            {new Date(product.createdAt || Date.now()).toLocaleDateString()}
+                          </div>
+                        </div>
+                        <h4 className="font-semibold text-sm line-clamp-2 mb-1">{product.title}</h4>
+                        <div className="text-lg font-bold text-sky-600">৳{Number(product.price).toLocaleString()}</div>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                ))
+              ) : (
+                <div className="col-span-2 text-sm text-muted-foreground p-4 border border-dashed rounded-xl">
+                  No recent products in this category yet.
+                </div>
+              )}
+            </div>
+          </div>
+
         </div>
       </section>
 

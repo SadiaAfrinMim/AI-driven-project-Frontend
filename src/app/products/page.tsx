@@ -43,7 +43,7 @@ export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string | null>('');
+  const [selectedCategory, setSelectedCategory] = useState<string | null>('Electronics');
   const [priceRange, setPriceRange] = useState({ min: '', max: '' });
   const [sortBy, setSortBy] = useState<string | null>('createdAt');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc' | null>('desc');
@@ -123,7 +123,7 @@ export default function ProductsPage() {
 
   const clearFilters = () => {
     setSearchQuery('');
-    setSelectedCategory('');
+    setSelectedCategory('Electronics'); // Always default to Electronics as requested
     setPriceRange({ min: '', max: '' });
     setSortBy('createdAt');
     setSortOrder('desc');
@@ -356,12 +356,12 @@ export default function ProductsPage() {
                   </CardHeader>
                   <CardContent className="space-y-6 pt-0">
                     
-                    {/* Category Filter */}
+                    {/* Category Filter - Defaults to Electronics */}
                     <div>
                       <label className="text-sm font-semibold text-gray-700 mb-2 block">Category</label>
                     <Select value={selectedCategory || ''} onValueChange={(value) => setSelectedCategory(value || null)}>
                       <SelectTrigger className="w-full">
-                        <SelectValue placeholder="All Categories" />
+                        <SelectValue placeholder="Electronics" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="">All Categories</SelectItem>
@@ -370,6 +370,7 @@ export default function ProductsPage() {
                         ))}
                       </SelectContent>
                     </Select>
+                    <p className="text-[10px] text-sky-600 mt-1">Default: Electronics</p>
                     </div>
 
                     {/* Price Range */}

@@ -58,6 +58,12 @@ export function Navbar() {
     const handleProfileUpdate = () => {
       console.log('🔄 [NAVBAR] userProfileUpdated event received - refreshing user image from cookie');
       loadUserFromCookie();
+      
+      // Extra safety: also pull fresh user into local state immediately
+      const fresh = getFreshUser();
+      if (fresh) {
+        setUser(fresh);
+      }
     };
 
     const handleCartUpdate = () => {
@@ -96,34 +102,37 @@ export function Navbar() {
 
   const freshUser = mounted ? (getFreshUser() || user) : null;
 
+  // Force re-render of avatar when profileImage URL changes (prevents stale image after upload)
+  const avatarKey = freshUser?.profileImage ? `${freshUser.profileImage}-${freshUser.updatedAt || Date.now()}` : 'no-image';
+
   return (
     <nav suppressHydrationWarning className={`sticky top-0 z-50 transition-all duration-300 ${
       isDashboard
         ? 'bg-blue-50/95 backdrop-blur-2xl border-b border-blue-200/80 shadow-sm'
         : 'bg-blue-50/95 backdrop-blur-xl border-b border-blue-200 shadow-sm'
     }`}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+        <div className="flex justify-between items-center h-14 sm:h-16">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-3 group">
-            <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-sky-600 shadow-lg group-hover:scale-105 transition-transform">
-              <Bot className="h-5 w-5 text-white" />
+          <Link href="/" className="flex items-center gap-2 sm:gap-3 group flex-shrink-0">
+            <div className="flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-sky-600 shadow-lg group-hover:scale-105 transition-transform">
+              <Bot className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
             </div>
             <div>
-              <span className="text-xl font-bold text-gray-900">
+              <span className="text-lg sm:text-xl font-bold text-gray-900">
                 AI Suggester
               </span>
             </div>
           </Link>
 
           {/* Navigation Links */}
-          <div className="hidden md:flex items-center space-x-6">
+           <div className="hidden md:flex items-center space-x-4 lg:space-x-6">
             {mounted && isAuthenticated ? (
                <>
-                 <Link
-                   href="/"
-                   className="text-foreground/70 hover:text-primary px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 hover:bg-primary/10"
-                 >
+                  <Link
+                    href="/"
+                    className="text-foreground/70 hover:text-primary px-2 lg:px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 hover:bg-primary/10"
+                  >
                    Home
                  </Link>
 
@@ -197,8 +206,8 @@ export function Navbar() {
             )}
           </div>
 
-            {/* Right side actions */}
-            <div className="flex items-center space-x-2">
+            {/* Right side actions - ultra compact on mobile */}
+            <div className="flex items-center space-x-1 sm:space-x-2">
               {mounted && freshUser ? (
                 <>
                   {/* Cart Icon - Prominent & Easy to See */}
@@ -208,10 +217,10 @@ export function Navbar() {
                         setIsCartOpen(!isCartOpen);
                         setIsProfileDropdownOpen(false);
                       }}
-                      className="relative p-2.5 rounded-xl hover:bg-blue-100 active:bg-blue-200 transition-all border border-blue-300 text-blue-700 hover:text-blue-800"
+                      className="relative p-2 sm:p-2.5 rounded-xl hover:bg-blue-100 active:bg-blue-200 transition-all border border-blue-300 text-blue-700 hover:text-blue-800"
                       aria-label="Shopping Cart"
                     >
-                      <ShoppingCart className="h-5 w-5" />
+                      <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5" />
                       {getCartCount() > 0 && (
                         <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] flex items-center justify-center px-1 rounded-full bg-emerald-500 text-white text-[10px] font-bold shadow">
                           {getCartCount()}
@@ -221,7 +230,12 @@ export function Navbar() {
 
                       {/* Beautiful Cart Dropdown - Blue theme */}
                       {isCartOpen && (
-                        <div className="absolute right-0 mt-3 w-80 bg-white rounded-2xl shadow-2xl border border-blue-200 z-50 overflow-hidden">
+                        <div className="fixed left-1/2 -translate-x-1/2 top-[58px] sm:top-[66px]
+                          w-[calc(100vw-16px)] max-w-[330px]     /* Mobile */
+                          sm:max-w-[310px]                       /* sm */
+                          md:max-w-[295px]                       /* md */
+                          lg:max-w-[330px]                       /* lg+ */
+                          bg-white rounded-2xl shadow-2xl border border-blue-200 z-50 overflow-hidden">
                         <div className="px-4 py-3 bg-sky-100 border-b flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <ShoppingCart className="h-4 w-4 text-blue-700" />
@@ -356,78 +370,89 @@ export function Navbar() {
                         setIsProfileDropdownOpen(!isProfileDropdownOpen);
                         setIsCartOpen(false);
                       }}
-                      className="flex items-center gap-3 rounded-full pl-1.5 pr-4 py-1.5 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-all active:scale-[0.985]"
+                      className="flex items-center gap-1.5 sm:gap-2 md:gap-3 rounded-full pl-1 pr-2 sm:pl-1.5 sm:pr-4 py-1 sm:py-1.5 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-all active:scale-[0.985]"
                     >
                       {freshUser.profileImage ? (
                         <img
+                          key={avatarKey}
                           src={freshUser.profileImage}
                           alt={freshUser.name}
-                          className="h-9 w-9 rounded-full ring-2 ring-blue-200 dark:ring-blue-700 object-cover"
+                          className="h-7 w-7 sm:h-8 sm:w-8 md:h-9 md:w-9 rounded-full ring-2 ring-blue-200 dark:ring-blue-700 object-cover flex-shrink-0"
+                          onError={(e) => {
+                            // If image fails to load, fall back to initial
+                            (e.target as HTMLImageElement).style.display = 'none';
+                          }}
                         />
                       ) : (
-                        <div className="h-9 w-9 rounded-full bg-sky-600 flex items-center justify-center ring-2 ring-sky-200 dark:ring-sky-700">
-                          <span className="text-white font-bold text-sm tracking-tight">
+                        <div className="h-7 w-7 sm:h-8 sm:w-8 md:h-9 md:w-9 rounded-full bg-sky-600 flex items-center justify-center ring-2 ring-sky-200 dark:ring-sky-700 flex-shrink-0">
+                          <span className="text-white font-bold text-[10px] sm:text-xs md:text-sm tracking-tight">
                             {freshUser.name.charAt(0).toUpperCase()}
                           </span>
                         </div>
                       )}
 
-                      <div className="hidden md:block text-left">
-                        <p className="text-sm font-semibold text-foreground tracking-tight">
-                          {freshUser.name.split(' ')[0]}
-                        </p>
-                        <p className="text-[10px] text-muted-foreground -mt-0.5">{freshUser.role}</p>
-                      </div>
+                      <div className="hidden md:block text-left min-w-0">
+                         <p className="text-sm font-semibold text-foreground tracking-tight truncate max-w-[90px]">
+                           {freshUser.name.split(' ')[0]}
+                         </p>
+                         <p className="text-[10px] text-muted-foreground -mt-0.5 truncate max-w-[90px]">{freshUser.role}</p>
+                       </div>
                     </button>
 
-                    {/* Professional Dropdown Menu */}
+                    {/* Profile Card Dropdown Box - Centered in the middle of the screen */}
                     {isProfileDropdownOpen && (
                    <div 
-                     className="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-900 rounded-xl shadow-2xl border border-blue-200 dark:border-blue-800 py-2 z-50"
+                     className="fixed left-1/2 -translate-x-1/2 top-[58px] sm:top-[66px]
+                       w-[calc(100vw-16px)] max-w-[310px]     /* Mobile */
+                       sm:max-w-[295px]                       /* sm */
+                       md:max-w-[275px]                       /* md */
+                       lg:max-w-[290px]                       /* lg+ */
+                       bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-blue-200 dark:border-blue-800 py-2 z-[70] 
+                       transition-all duration-200 ease-out origin-top"
                      onClick={(e) => e.stopPropagation()}
                    >
-                     <div className="px-4 py-3 border-b bg-blue-50 dark:bg-blue-900/30">
-                      <p className="font-semibold text-sm">{freshUser.name}</p>
-                      <p className="text-xs text-muted-foreground truncate">{freshUser.email}</p>
-                      <div className="mt-1.5">
-                        <span className="inline-block px-2 py-0.5 text-[10px] font-medium rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">
-                          {freshUser.role}
-                        </span>
+                       <div className="px-3 sm:px-4 py-2.5 sm:py-3 border-b bg-blue-50 dark:bg-blue-900/30">
+                        <p className="font-semibold text-[13px] sm:text-sm">{freshUser.name}</p>
+                        <p className="text-[11px] sm:text-xs text-muted-foreground truncate">{freshUser.email}</p>
+                        <div className="mt-1.5">
+                          <span className="inline-block px-2 py-0.5 text-[10px] font-medium rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">
+                            {freshUser.role}
+                          </span>
+                        </div>
                       </div>
-                    </div>
 
-                    <div className="py-1">
-                      <Link href="/dashboard/profile" className="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors" onClick={() => setIsProfileDropdownOpen(false)}>
-                        <User className="w-4 h-4 text-muted-foreground" /> My Profile
-                      </Link>
-                      <Link href="/dashboard" className="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors" onClick={() => setIsProfileDropdownOpen(false)}>
-                        <Settings className="w-4 h-4 text-muted-foreground" /> Dashboard
-                      </Link>
-
-                      {(freshUser.role === 'ADMIN' || freshUser.role === 'MANAGER') && (
-                        <Link href="/dashboard/analytics" className="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors" onClick={() => setIsProfileDropdownOpen(false)}>
-                          <BarChart3 className="w-4 h-4 text-muted-foreground" /> Analytics
+                      <div className="py-1">
+                        <Link href="/dashboard/profile" className="flex items-center gap-3 px-3 sm:px-4 py-2 sm:py-[10px] text-sm hover:bg-accent transition-colors" onClick={() => setIsProfileDropdownOpen(false)}>
+                          <User className="w-4 h-4 text-muted-foreground" /> My Profile
                         </Link>
-                      )}
-
-                      {freshUser.role === 'ADMIN' && (
-                        <Link href="/dashboard/users" className="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors" onClick={() => setIsProfileDropdownOpen(false)}>
-                          <Shield className="w-4 h-4 text-muted-foreground" /> Manage Users
+                        <Link href="/dashboard" className="flex items-center gap-3 px-3 sm:px-4 py-2 sm:py-[10px] text-sm hover:bg-accent transition-colors" onClick={() => setIsProfileDropdownOpen(false)}>
+                          <Settings className="w-4 h-4 text-muted-foreground" /> Dashboard
                         </Link>
-                      )}
-                    </div>
 
-                    <div className="border-t pt-1 mt-1">
-                      <button
-                        onClick={() => {
-                          handleLogout();
-                          setIsProfileDropdownOpen(false);
-                        }}
-                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-950/50 transition-colors"
-                      >
-                        <LogOut className="w-4 h-4" /> Logout
-                      </button>
-                    </div>
+                        {(freshUser.role === 'ADMIN' || freshUser.role === 'MANAGER') && (
+                          <Link href="/dashboard/analytics" className="flex items-center gap-3 px-3 sm:px-4 py-2 sm:py-[10px] text-sm hover:bg-accent transition-colors" onClick={() => setIsProfileDropdownOpen(false)}>
+                            <BarChart3 className="w-4 h-4 text-muted-foreground" /> Analytics
+                          </Link>
+                        )}
+
+                        {freshUser.role === 'ADMIN' && (
+                          <Link href="/dashboard/users" className="flex items-center gap-3 px-3 sm:px-4 py-2 sm:py-[10px] text-sm hover:bg-accent transition-colors" onClick={() => setIsProfileDropdownOpen(false)}>
+                            <Shield className="w-4 h-4 text-muted-foreground" /> Manage Users
+                          </Link>
+                        )}
+                      </div>
+
+                      <div className="border-t pt-1 mt-1">
+                        <button
+                          onClick={() => {
+                            handleLogout();
+                            setIsProfileDropdownOpen(false);
+                          }}
+                          className="w-full flex items-center gap-3 px-3 sm:px-4 py-2 sm:py-[10px] text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-950/50 transition-colors"
+                        >
+                          <LogOut className="w-4 h-4" /> Logout
+                        </button>
+                      </div>
                   </div>
                 )}
               </div>
@@ -453,8 +478,9 @@ export function Navbar() {
                 variant="ghost"
                 size="sm"
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                className="p-1.5"
               >
-                <Menu className="h-5 w-5" />
+                <Menu className="h-4 w-4 sm:h-5 sm:w-5" />
               </Button>
             </div>
           </div>
