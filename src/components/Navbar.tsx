@@ -77,7 +77,7 @@ export function Navbar() {
       window.removeEventListener('userProfileUpdated', handleProfileUpdate);
       window.removeEventListener('cartUpdated', handleCartUpdate);
     };
-  }, []);
+  }, [pathname]);
 
   const handleLogout = () => {
     Cookies.remove('accessToken');

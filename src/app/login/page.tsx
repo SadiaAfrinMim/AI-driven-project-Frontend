@@ -37,7 +37,9 @@ export default function LoginPage() {
       Cookies.set('user', JSON.stringify(response.data.user), { expires: 7 });
       Cookies.set('role', response.data.user.role, { expires: 7 });
 
-      router.push('/dashboard');
+      // Redirect based on role
+      const redirectPath = response.data.user.role === 'USER' ? '/products' : '/dashboard';
+      router.push(redirectPath);
       toast.success('Login successful!');
     } catch (error: any) {
       console.error('Login failed:', error);
@@ -67,7 +69,9 @@ export default function LoginPage() {
       Cookies.set('user', JSON.stringify(response.data.user), { expires: 7 });
       Cookies.set('role', response.data.user.role, { expires: 7 });
 
-      router.push('/dashboard');
+      // Redirect based on role
+      const redirectPath = response.data.user.role === 'USER' ? '/products' : '/dashboard';
+      router.push(redirectPath);
       toast.success(`Logged in as ${role}!`);
     } catch (error: any) {
       console.error('Demo login failed:', error);

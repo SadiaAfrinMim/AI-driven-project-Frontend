@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import Cookies from 'js-cookie';
+
 import {
   ArrowRight,
   Bot,
@@ -54,31 +54,33 @@ type ProductCard = {
 
 // Exact same categories as used in /products page and Add Item form (hubahu)
 const categories = [
-  'Electronics',
-  'Fashion',
-  'Home & Living',
-  'Beauty',
-  'Sports & Outdoors',
-  'Books',
-  'Toys & Games',
-  'Health & Wellness',
-  'Automotive',
-  'Food & Grocery',
+    'Electronics',
+    'Fashion',
+    'Home & Living',
+    'Beauty',
+    'Sports & Outdoors',
+    'Books',
+    'Toys & Games',
+    'Health & Wellness',
+    'Automotive',
+    'Food & Grocery',
 ];
 
 export default function LandingPage() {
   const router = useRouter();
   const [query, setQuery] = useState('');
   const [budget, setBudget] = useState('150');
-  const [category, setCategory] = useState('Electronics');
+  const [category, setCategory] = useState('');
   const [vibe, setVibe] = useState('premium');
   const [loading, setLoading] = useState(false);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [featuredProducts, setFeaturedProducts] = useState<ProductCard[]>([]);
-
+  
   // Two new relevant quick-pick sections based on selected category
   const [topRatedInCategory, setTopRatedInCategory] = useState<ProductCard[]>([]);
   const [newInCategory, setNewInCategory] = useState<ProductCard[]>([]);
+  const [allTopRatedProducts, setAllTopRatedProducts] = useState<ProductCard[]>([]);
+  // All products top rated (not category-specific)
 
   const runConcierge = async () => {
     try {
@@ -103,27 +105,28 @@ export default function LandingPage() {
       const data = await response.json();
       let aiSuggestions = data.suggestions || [];
 
-      // Fallback: If AI returns nothing (e.g. no strong title match in category),
-      // show the relevant category products we already loaded as recommendations.
-      if (aiSuggestions.length === 0 && (topRatedInCategory.length > 0 || newInCategory.length > 0)) {
-        const combined = [...topRatedInCategory, ...newInCategory]
-          .slice(0, 6)
-          .map(p => ({
-            itemId: p.id,
-            title: p.title,
-            description: p.description?.slice(0, 120) || '',
-            price: p.price,
-            category: p.category,
-            location: p.location || '',
-            image: p.images?.[0] || null,
-            avgRating: p.rating || 0,
-            reviewCount: p.reviewCount || 0,
-            tags: [],
-            score: 75,
-            reason: `Popular in ${p.category} category`,
-          }));
-        aiSuggestions = combined;
-      }
+       // Fallback: If AI returns nothing (e.g. no strong title match in category),
+       // show the relevant category products we already loaded as recommendations.
+       if (aiSuggestions.length === 0 && (topRatedInCategory.length > 0 || newInCategory.length > 0)) {
+         const combined = [...topRatedInCategory, ...newInCategory]
+           .slice(0, 6)
+           .map(p => ({
+             itemId: p.id,
+             title: p.title,
+             description: p.description?.slice(0, 120) || '',
+             price: p.price,
+             category: p.category,
+             location: p.location || '',
+             image: p.images?.[0] || null,
+             avgRating: p.rating || 0,
+             reviewCount: p.reviewCount || 0,
+             tags: [],
+             // Fallback score for category-based recommendations (not AI-generated)
+             score: 82,
+             reason: `Popular in ${p.category} category`,
+           }));
+         aiSuggestions = combined;
+       }
 
       setSuggestions(aiSuggestions);
     } catch (error) {
@@ -134,44 +137,179 @@ export default function LandingPage() {
     }
   };
 
-  const loadFeaturedProducts = async () => {
-    try {
-      const response = await fetchApi(`${api.items}/approved?limit=4`);
-      setFeaturedProducts(response.data?.items || []);
-    } catch (error) {
-      console.error('Failed to load featured products', error);
-      setFeaturedProducts([]);
-    }
-  };
+   const loadFeaturedProducts = async () => {
+     try {
+       const response = await fetchApi(`${api.items}/approved?limit=4`);
+       setFeaturedProducts(response.data?.items || []);
+     } catch (error) {
+       console.error('Failed to load featured products', error);
+       // Provide mock data when backend is unavailable
+       setFeaturedProducts([
+         {
+           id: 'featured-1',
+           title: 'Featured Product 1',
+           description: 'This is a featured product for demonstration',
+           price: 39.99,
+           category: 'Electronics',
+           location: 'Dhaka, Bangladesh',
+           rating: 4.6,
+           reviewCount: 156,
+           images: ['https://via.placeholder.com/300'],
+           createdAt: new Date().toISOString()
+         },
+         {
+           id: 'featured-2',
+           title: 'Featured Product 2',
+           description: 'Another featured product for demonstration',
+           price: 59.99,
+           category: 'Fashion',
+           location: 'Chittagong, Bangladesh',
+           rating: 4.3,
+           reviewCount: 89,
+           images: ['https://via.placeholder.com/300'],
+           createdAt: new Date().toISOString()
+         }
+       ]);
+     }
+   };
 
-  // Load two relevant quick sections based on current category selection
-  const loadCategoryQuickPicks = async (cat: string) => {
-    if (!cat) return;
+    // Load all top rated products (not category-specific) for the hero section
+    const loadAllTopRatedProducts = async () => {
+      try {
+        const res = await fetchApi(`${api.items}/approved?sortBy=rating&sortOrder=desc&limit=6`);
+        setAllTopRatedProducts(res.data?.items || []);
+      } catch (error) {
+        console.error('Failed to load all top rated products', error);
+        // Provide mock data when backend is unavailable
+        setAllTopRatedProducts([
+          {
+            id: 'all-top-1',
+            title: 'Premium Wireless Headphones',
+            description: 'High-fidelity wireless headphones with noise cancellation and 30-hour battery life',
+            price: 129.99,
+            category: 'Electronics',
+            location: 'Dhaka, Bangladesh',
+            rating: 4.9,
+            reviewCount: 342,
+            images: ['https://images.unsplash.com/photo-1583394838336-acd977736f90?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=MnwyNjY2OXwwfDF8c2VhcmNofDF8fGhlYWRwaG9uZXxlbnwwfHx8fDE2NTc1NjQ2MDQ&ixlib=rb-1.2.1&q=80&w=400'],
+            createdAt: new Date(Date.now() - 86400000 * 15).toISOString() // 15 days ago
+          },
+          {
+            id: 'all-top-2',
+            title: 'Organic Cotton Bedding Set',
+            description: 'Luxury 4-piece organic cotton bedding set with deep pockets',
+            price: 89.99,
+            category: 'Home & Living',
+            location: 'Sylhet, Bangladesh',
+            rating: 4.8,
+            reviewCount: 187,
+            images: ['https://images.unsplash.com/photo-1586375303573-__g0GfFhu5ToE?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=MnwyNjY2OXwwfDF8c2VhcmNofDF8fGJlZHJlc3xlbnwwfHx8fDE2NTc1NjQ2MDQ&ixlib=rb-1.2.1&q=80&w=400'],
+            createdAt: new Date(Date.now() - 86400000 * 10).toISOString() // 10 days ago
+          },
+          {
+            id: 'all-top-3',
+            title: 'Professional DSLR Camera',
+            description: '24.1MP DSLR camera with 4K video recording and wireless connectivity',
+            price: 599.99,
+            category: 'Electronics',
+            location: 'Chittagong, Bangladesh',
+            rating: 4.7,
+            reviewCount: 98,
+            images: ['https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=MnwyNjY2OXwwfDF8c2VhcmNofDF8fGNlcmFtZXJ8ZW58MHx8fHwxNjU3NTY0NjA0&ixlib=rb-1.2.1&q=80&w=400'],
+            createdAt: new Date(Date.now() - 86400000 * 8).toISOString() // 8 days ago
+          }
+        ]);
+      }
+    };
 
-    try {
-      // Top Rated in this category
-      const topRatedRes = await fetchApi(
-        `${api.items}/approved?category=${encodeURIComponent(cat)}&sortBy=rating&sortOrder=desc&limit=4`
-      );
-      setTopRatedInCategory(topRatedRes.data?.items || []);
+    // Load two relevant quick sections based on current category selection
+    const loadCategoryQuickPicks = async (cat: string) => {
+      if (!cat) return;
 
-      // New Arrivals in this category
-      const newRes = await fetchApi(
-        `${api.items}/approved?category=${encodeURIComponent(cat)}&sortBy=createdAt&sortOrder=desc&limit=4`
-      );
-      setNewInCategory(newRes.data?.items || []);
-    } catch (error) {
-      console.error('Failed to load category quick picks', error);
-      setTopRatedInCategory([]);
-      setNewInCategory([]);
-    }
-  };
+      try {
+        // Top Rated in this category
+        const topRatedRes = await fetchApi(
+          `${api.items}/approved?category=${encodeURIComponent(cat)}&sortBy=rating&sortOrder=desc&limit=4`
+        );
+        setTopRatedInCategory(topRatedRes.data?.items || []);
+      } catch (error) {
+        console.error('Failed to load category quick picks', error);
+        // Provide more varied mock data when backend is unavailable
+        const mockTopRated = [
+          {
+            id: 'mock-top-1',
+            title: `Premium ${cat} Product`,
+            description: `High-quality ${cat.toLowerCase()} product with excellent ratings and reviews`,
+            price: 79.99,
+            category: cat,
+            location: 'Dhaka, Bangladesh',
+            rating: 4.8,
+            reviewCount: 156,
+            images: ['https://via.placeholder.com/300'],
+            createdAt: new Date(Date.now() - 86400000 * 12).toISOString() // 12 days ago
+          },
+          {
+            id: 'mock-top-2',
+            title: `Professional ${cat} Solution`,
+            description: `Professional-grade ${cat.toLowerCase()} solution for demanding users`,
+            price: 129.99,
+            category: cat,
+            location: 'Chittagong, Bangladesh',
+            rating: 4.6,
+            reviewCount: 89,
+            images: ['https://via.placeholder.com/300'],
+            createdAt: new Date(Date.now() - 86400000 * 8).toISOString() // 8 days ago
+          }
+        ];
+        setTopRatedInCategory(mockTopRated);
+      }
 
-  useEffect(() => {
-    // Only load featured products on initial page load.
-    // AI recommendations should ONLY show after user clicks "Generate Suggestions" with a query.
-    loadFeaturedProducts();
-  }, []);
+      try {
+        // New Arrivals in this category
+        const newRes = await fetchApi(
+          `${api.items}/approved?category=${encodeURIComponent(cat)}&sortBy=createdAt&sortOrder=desc&limit=4`
+        );
+        setNewInCategory(newRes.data?.items || []);
+      } catch (error) {
+        console.error('Failed to load category quick picks', error);
+        // Provide more varied mock data when backend is unavailable
+        const mockNewArrivals = [
+          {
+            id: 'mock-new-1',
+            title: `Latest ${cat} Innovation`,
+            description: `Recently launched innovative ${cat.toLowerCase()} product`,
+            price: 99.99,
+            category: cat,
+            location: 'Sylhet, Bangladesh',
+            rating: 4.5,
+            reviewCount: 45,
+            images: ['https://via.placeholder.com/300'],
+            createdAt: new Date(Date.now() - 86400000 * 2).toISOString() // 2 days ago
+          },
+          {
+            id: 'mock-new-2',
+            title: `New ${cat} Essential`,
+            description: `Essential new ${cat.toLowerCase()} item for modern lifestyles`,
+            price: 49.99,
+            category: cat,
+            location: 'Barisal, Bangladesh',
+            rating: 4.3,
+            reviewCount: 32,
+            images: ['https://via.placeholder.com/300'],
+            createdAt: new Date(Date.now() - 86400000 * 1).toISOString() // 1 day ago
+          }
+        ];
+        setNewInCategory(mockNewArrivals);
+      }
+    };
+
+   useEffect(() => {
+     // Only load featured products on initial page load.
+     // AI recommendations should ONLY show after user clicks "Generate Suggestions" with a query.
+     loadFeaturedProducts();
+     // Load all top rated products (not category-specific) for the hero section
+     loadAllTopRatedProducts();
+   }, []);
 
   // Whenever the category dropdown changes, load the two relevant sections
   useEffect(() => {
@@ -280,13 +418,13 @@ export default function LandingPage() {
                   </SelectContent>
                 </Select>
 
-                <Button 
-                  onClick={() => void runConcierge()} 
-                  disabled={loading || (!query.trim() && !category)} 
-                  className="h-12 w-full rounded-2xl text-base"
-                >
-                  {loading ? 'Thinking...' : 'Generate Suggestions'}
-                </Button>
+                 <Button 
+                   onClick={() => void runConcierge()} 
+                   disabled={loading || (!query.trim() && !category)} 
+                   className="h-12 w-full rounded-2xl text-base blur-0"
+                 >
+                   {loading ? 'Thinking...' : 'Generate Suggestions'}
+                 </Button>
               </div>
 
               {/* AI Recommendations only appear after user clicks Generate with a query */}
@@ -332,107 +470,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Two new relevant sections - dynamically tied to selected category */}
-      <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          
-          {/* Section 1: Top Rated in Selected Category */}
-          <div>
-            <div className="flex items-center justify-between mb-5">
-              <div>
-                <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary/80">Top Rated</p>
-                <h3 className="text-2xl font-bold tracking-tight">Best in {category}</h3>
-              </div>
-              <Link href={`/products?category=${encodeURIComponent(category)}`} className="text-sm text-primary hover:underline">
-                View all →
-              </Link>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {topRatedInCategory.length > 0 ? (
-                topRatedInCategory.map((product) => (
-                  <Link key={product.id} href={`/products/${product.id}`}>
-                    <Card className="h-full overflow-hidden border-sky-200 bg-white shadow-sm hover:shadow-md transition-all">
-                      <div className="aspect-video bg-sky-100">
-                        {product.images?.[0] ? (
-                          <img src={product.images[0]} alt={product.title} className="h-full w-full object-cover" />
-                        ) : (
-                          <div className="flex h-full items-center justify-center">
-                            <Package className="h-8 w-8 text-sky-400" />
-                          </div>
-                        )}
-                      </div>
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between mb-1">
-                          <Badge variant="secondary" className="text-xs">{product.category}</Badge>
-                          <div className="flex items-center text-sm text-amber-500">
-                            <Star className="h-3.5 w-3.5 mr-0.5 fill-current" />
-                            {Number(product.rating || 0).toFixed(1)}
-                          </div>
-                        </div>
-                        <h4 className="font-semibold text-sm line-clamp-2 mb-1">{product.title}</h4>
-                        <div className="text-lg font-bold text-sky-600">৳{Number(product.price).toLocaleString()}</div>
-                      </CardContent>
-                    </Card>
-                  </Link>
-                ))
-              ) : (
-                <div className="col-span-2 text-sm text-muted-foreground p-4 border border-dashed rounded-xl">
-                  No products yet in this category.
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Section 2: New Arrivals in Selected Category */}
-          <div>
-            <div className="flex items-center justify-between mb-5">
-              <div>
-                <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary/80">Fresh Drops</p>
-                <h3 className="text-2xl font-bold tracking-tight">New in {category}</h3>
-              </div>
-              <Link href={`/products?category=${encodeURIComponent(category)}`} className="text-sm text-primary hover:underline">
-                View all →
-              </Link>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {newInCategory.length > 0 ? (
-                newInCategory.map((product) => (
-                  <Link key={product.id} href={`/products/${product.id}`}>
-                    <Card className="h-full overflow-hidden border-sky-200 bg-white shadow-sm hover:shadow-md transition-all">
-                      <div className="aspect-video bg-sky-100">
-                        {product.images?.[0] ? (
-                          <img src={product.images[0]} alt={product.title} className="h-full w-full object-cover" />
-                        ) : (
-                          <div className="flex h-full items-center justify-center">
-                            <Package className="h-8 w-8 text-sky-400" />
-                          </div>
-                        )}
-                      </div>
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between mb-1">
-                          <Badge variant="secondary" className="text-xs">{product.category}</Badge>
-                          <div className="text-xs text-muted-foreground">
-                            {new Date(product.createdAt || Date.now()).toLocaleDateString()}
-                          </div>
-                        </div>
-                        <h4 className="font-semibold text-sm line-clamp-2 mb-1">{product.title}</h4>
-                        <div className="text-lg font-bold text-sky-600">৳{Number(product.price).toLocaleString()}</div>
-                      </CardContent>
-                    </Card>
-                  </Link>
-                ))
-              ) : (
-                <div className="col-span-2 text-sm text-muted-foreground p-4 border border-dashed rounded-xl">
-                  No recent products in this category yet.
-                </div>
-              )}
-            </div>
-          </div>
-
-        </div>
-      </section>
+   
 
       <section id="features" className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
         <div className="mb-10 flex items-end justify-between gap-4">

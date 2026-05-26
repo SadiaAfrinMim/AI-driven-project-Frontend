@@ -43,7 +43,7 @@ export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string | null>('Electronics');
+  const [selectedCategory, setSelectedCategory] = useState<string | null>('');
   const [priceRange, setPriceRange] = useState({ min: '', max: '' });
   const [sortBy, setSortBy] = useState<string | null>('createdAt');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc' | null>('desc');
@@ -73,62 +73,62 @@ export default function ProductsPage() {
     fetchProducts();
   }, [searchQuery, selectedCategory, priceRange, sortBy, sortOrder, currentPage]);
 
-  const fetchProducts = async () => {
-    try {
-      setLoading(true);
-      const params = new URLSearchParams({
-        search: searchQuery,
-        ...(selectedCategory && { category: selectedCategory }),
-        ...(priceRange.min && { minPrice: priceRange.min }),
-        ...(priceRange.max && { maxPrice: priceRange.max }),
-        sortBy: sortBy || 'createdAt',
-        sortOrder: sortOrder || 'desc',
-        page: currentPage.toString(),
-        limit: itemsPerPage.toString()
-      });
+const fetchProducts = async () => {
+  try {
+    setLoading(true);
+    const params = new URLSearchParams({
+      search: searchQuery,
+      ...(selectedCategory !== null && selectedCategory !== '' && { category: selectedCategory }),
+      ...(priceRange.min && { minPrice: priceRange.min }),
+      ...(priceRange.max && { maxPrice: priceRange.max }),
+      sortBy: sortBy || 'createdAt',
+      sortOrder: sortOrder || 'desc',
+      page: currentPage.toString(),
+      limit: itemsPerPage.toString()
+    });
 
-      // Use dedicated approved items endpoint
-      const response = await fetchApi(`${api.items}/approved?${params}`);
-      const rawItems = response?.data?.items || response?.data || [];
-      const meta = response?.data?.meta || {};
+    // Use dedicated approved items endpoint
+    const response = await fetchApi(`${api.items}/approved?${params}`);
+    const rawItems = response?.data?.items || response?.data || [];
+    const meta = response?.data?.meta || {};
 
-      const mappedItems = rawItems.map((it: any) => ({
-        id: it.id,
-        title: it.title ?? '',
-        description: it.description ?? '',
-        price: typeof it.price === 'number' ? it.price : Number(it.price) || 0,
-        quantity: typeof it.quantity === 'number' ? it.quantity : (it.quantity ? Number(it.quantity) : 0),
-        location: it.location ?? '',
-        category: it.category ?? '',
-        rating: typeof it.rating === 'number' ? it.rating : Number(it.rating) || 0,
-        reviewCount: typeof it.reviewCount === 'number' ? it.reviewCount : (Array.isArray(it.reviews) ? it.reviews.length : (it.reviewCount ? Number(it.reviewCount) : 0)),
-        images: Array.isArray(it.images) ? it.images : [],
-        tags: Array.isArray(it.tags) ? it.tags : [],
-        createdAt: it.createdAt ?? new Date().toISOString(),
-        isAIContent: !!it.isAIContent,
-      }));
+    const mappedItems = rawItems.map((it: any) => ({
+      id: it.id,
+      title: it.title ?? '',
+      description: it.description ?? '',
+      price: typeof it.price === 'number' ? it.price : Number(it.price) || 0,
+      quantity: typeof it.quantity === 'number' ? it.quantity : (it.quantity ? Number(it.quantity) : 0),
+      location: it.location ?? '',
+      category: it.category ?? '',
+      rating: typeof it.rating === 'number' ? it.rating : Number(it.rating) || 0,
+      reviewCount: typeof it.reviewCount === 'number' ? it.reviewCount : (Array.isArray(it.reviews) ? it.reviews.length : (it.reviewCount ? Number(it.reviewCount) : 0)),
+      images: Array.isArray(it.images) ? it.images : [],
+      tags: Array.isArray(it.tags) ? it.tags : [],
+      createdAt: it.createdAt ?? new Date().toISOString(),
+      isAIContent: !!it.isAIContent,
+    }));
 
-      setProducts(mappedItems);
-      setTotalPages(meta.totalPages || Math.ceil((meta.total || mappedItems.length) / itemsPerPage) || 1);
-      setTotalItems(meta.total || mappedItems.length);
-    } catch (error) {
-      console.error('Failed to fetch products:', error);
-      setProducts([]);
-      setTotalPages(1);
-      setTotalItems(0);
-    } finally {
-      setLoading(false);
-    }
-  };
+    setProducts(mappedItems);
+    setTotalPages(meta.totalPages || Math.ceil((meta.total || mappedItems.length) / itemsPerPage) || 1);
+    setTotalItems(meta.total || mappedItems.length);
+  } catch (error) {
+    console.error('Failed to fetch products:', error);
+    setProducts([]);
+    setTotalPages(1);
+    setTotalItems(0);
+  } finally {
+    setLoading(false);
+  }
+};
 
-  const clearFilters = () => {
-    setSearchQuery('');
-    setSelectedCategory('Electronics'); // Always default to Electronics as requested
-    setPriceRange({ min: '', max: '' });
-    setSortBy('createdAt');
-    setSortOrder('desc');
-    setCurrentPage(1);
-  };
+const clearFilters = () => {
+  setSearchQuery('');
+  setSelectedCategory(''); // Default to All Categories
+  setPriceRange({ min: '', max: '' });
+  setSortBy('createdAt');
+  setSortOrder('desc');
+  setCurrentPage(1);
+};
 
   const renderStars = (rating: number) => {
     return Array.from({ length: 5 }, (_, i) => (
@@ -359,18 +359,18 @@ export default function ProductsPage() {
                     {/* Category Filter - Defaults to Electronics */}
                     <div>
                       <label className="text-sm font-semibold text-gray-700 mb-2 block">Category</label>
-                    <Select value={selectedCategory || ''} onValueChange={(value) => setSelectedCategory(value || null)}>
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Electronics" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="">All Categories</SelectItem>
-                        {categories.map((category) => (
-                          <SelectItem key={category} value={category}>{category}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <p className="text-[10px] text-sky-600 mt-1">Default: Electronics</p>
+<Select value={selectedCategory ?? ''} onValueChange={setSelectedCategory}>
+  <SelectTrigger className="w-full">
+    <SelectValue placeholder="All Categories" />
+  </SelectTrigger>
+  <SelectContent>
+    <SelectItem value="">All Categories</SelectItem>
+    {categories.map((category) => (
+      <SelectItem key={category} value={category}>{category}</SelectItem>
+    ))}
+  </SelectContent>
+</Select>
+                    <p className="text-[10px] text-sky-600 mt-1">Default: All Categories</p>
                     </div>
 
                     {/* Price Range */}
