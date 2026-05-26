@@ -35,6 +35,7 @@ interface SidebarProps {
 }
 
 const navigation = [
+  { name: 'Home', href: '/', icon: Bot },
   { name: 'Dashboard', href: '/dashboard', icon: Settings },
   { name: 'Recommendations', href: '/recommendations', icon: Sparkles },
   { name: 'Profile', href: '/dashboard/profile', icon: Users },

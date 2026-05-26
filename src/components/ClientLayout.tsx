@@ -42,11 +42,11 @@ export function ClientLayout({ children }: ClientLayoutProps) {
   return (
     <>
       <ChatbotRemover />
-      {!isAuthPage && <Navbar />}
+      {!isDashboard && <Navbar />}
       <main className="flex-1">
         {children}
       </main>
-      {!isDashboard && !isAuthPage && <Footer />}
+      {!isDashboard && <Footer />}
       <FloatingAIChatbot />
     </>
   );

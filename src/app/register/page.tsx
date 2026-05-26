@@ -89,14 +89,7 @@ export default function RegisterPage() {
                 <span className="bg-white px-2 text-muted-foreground">Quick Demo</span>
               </div>
             </div>
-            <Button 
-              variant="outline" 
-              className="w-full" 
-              onClick={() => quickRegister()} 
-              disabled={isLoading}
-            >
-              Use Demo Account
-            </Button>
+           
           </div>
 
           <div className="mt-6 text-center text-sm">
@@ -109,29 +102,6 @@ export default function RegisterPage() {
   );
 }
 
-// Quick demo registration function
-async function quickRegister() {
-  const demoData = {
-    name: 'Demo User',
-    email: 'user@demo.com',
-    password: 'password123',
-  };
 
-  try {
-    const response = await fetchApi(api.auth.register, {
-      method: 'POST',
-      body: JSON.stringify(demoData)
-    });
 
-    Cookies.set('accessToken', response.data.accessToken, { expires: 7 });
-    Cookies.set('user', JSON.stringify(response.data.user), { expires: 7 });
-    if (response.data.user.role) {
-      Cookies.set('role', response.data.user.role, { expires: 7 });
-    }
-
-    window.location.href = '/dashboard';
-  } catch (error: any) {
-    alert(error?.message || 'Failed to register demo account');
-  }
-}
 
