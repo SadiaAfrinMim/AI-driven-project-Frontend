@@ -48,8 +48,6 @@ export function Navbar() {
     setCartItems(items);
   };
 
-  // Check authentication on client side only to avoid hydration mismatch
-  // Also listen for profile image updates from /dashboard/profile so navbar avatar updates live
   useEffect(() => {
     loadUserFromCookie();
     loadCart();
@@ -59,7 +57,6 @@ export function Navbar() {
       console.log('🔄 [NAVBAR] userProfileUpdated event received - refreshing user image from cookie');
       loadUserFromCookie();
       
-      // Extra safety: also pull fresh user into local state immediately
       const fresh = getFreshUser();
       if (fresh) {
         setUser(fresh);
@@ -87,10 +84,6 @@ export function Navbar() {
     toast.success('Logged out successfully!');
   };
 
-
-
-  // Always derive the freshest user from cookie so that a newly uploaded Cloudinary profile photo
-  // (saved by /dashboard/profile) immediately appears in the navbar avatar without waiting for any state sync.
   const getFreshUser = () => {
     try {
       const raw = Cookies.get('user');
@@ -101,76 +94,65 @@ export function Navbar() {
   };
 
   const freshUser = mounted ? (getFreshUser() || user) : null;
-
-  // Force re-render of avatar when profileImage URL changes (prevents stale image after upload)
   const avatarKey = freshUser?.profileImage ? `${freshUser.profileImage}-${freshUser.updatedAt || Date.now()}` : 'no-image';
 
   return (
-    <nav suppressHydrationWarning className={`sticky top-0 z-50 transition-all duration-300 ${
+    <nav suppressHydrationWarning className={`sticky top-0 z-50 transition-all duration-300 backdrop-blur-md border-b ${
       isDashboard
-        ? 'bg-blue-50/95 backdrop-blur-2xl border-b border-blue-200/80 shadow-sm'
-        : 'bg-blue-50/95 backdrop-blur-xl border-b border-blue-200 shadow-sm'
+        ? 'bg-slate-50/80 dark:bg-slate-900/80 border-slate-200/60 dark:border-slate-800/60 shadow-sm'
+        : 'bg-white/80 dark:bg-slate-950/80 border-slate-100 dark:border-slate-900 shadow-sm'
     }`}>
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-14 sm:h-16">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-between items-center h-16">
+          
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2 sm:gap-3 group flex-shrink-0">
-            <div className="flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-sky-600 shadow-lg group-hover:scale-105 transition-transform">
-              <Bot className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
+          <Link href="/" className="flex items-center gap-2.5 group flex-shrink-0">
+            <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-gradient-to-br from-sky-500 to-blue-600 shadow-md shadow-blue-500/20 group-hover:scale-105 transition-transform duration-300">
+              <Bot className="h-5 w-5 text-white" />
             </div>
             <div>
-              <span className="text-lg sm:text-xl font-bold text-gray-900">
+              <span className="text-lg font-bold tracking-tight bg-gradient-to-r from-slate-900 to-slate-700 dark:from-white dark:to-slate-300 bg-clip-text text-transparent">
                 AI Suggester
               </span>
             </div>
           </Link>
 
-          {/* Navigation Links */}
-           <div className="hidden md:flex items-center space-x-4 lg:space-x-6">
+          {/* Navigation Links (Desktop) */}
+          <div className="hidden md:flex items-center space-x-1 lg:space-x-2">
             {mounted && isAuthenticated ? (
-               <>
-                  <Link
-                    href="/"
-                    className="text-foreground/70 hover:text-primary px-2 lg:px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 hover:bg-primary/10"
-                  >
-                   Home
-                 </Link>
-
-                <Link
-                  href="/recommendations"
-                  className="text-foreground/70 hover:text-primary px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 hover:bg-primary/10"
-                >
-                  Recommendations
-                </Link>
-                <Link
-                  href="/products"
-                  className="text-foreground/70 hover:text-primary px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 hover:bg-primary/10"
-                >
-                  Products
-                </Link>
-                <Link
-                  href="/about"
-                  className="text-foreground/70 hover:text-primary px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 hover:bg-primary/10"
-                >
-                  About
-                </Link>
-                <Link
-                  href="/help"
-                  className="text-foreground/70 hover:text-primary px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 hover:bg-primary/10"
-                >
-                  Help
-                </Link>
-                <Link
-                  href="/ai"
-                  className="text-foreground/70 hover:text-primary px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 hover:bg-primary/10"
-                >
-                  AI Assistant
-                </Link>
+              <>
+                {[
+                  { href: '/', label: 'Home' },
+                  { href: '/recommendations', label: 'Recommendations' },
+                  { href: '/products', label: 'Products' },
+                  { href: '/about', label: 'About' },
+                  { href: '/help', label: 'Help' },
+                  { href: '/ai', label: 'AI Assistant' },
+                ].map((link) => {
+                  const isActive = pathname === link.href;
+                  return (
+                    <Link
+                      key={link.href}
+                      href={link.href}
+                      className={`px-3 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
+                        isActive 
+                          ? 'bg-sky-50 text-sky-600 dark:bg-sky-950/50 dark:text-sky-400' 
+                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 hover:bg-slate-50 dark:hover:bg-slate-900 dark:hover:text-white'
+                      }`}
+                    >
+                      {link.label}
+                    </Link>
+                  );
+                })}
 
                 {(freshUser?.role === 'ADMIN' || freshUser?.role === 'MANAGER') && (
                   <Link
                     href="/dashboard/analytics"
-                    className="text-foreground/70 hover:text-primary px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 hover:bg-primary/10"
+                    className={`px-3 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
+                      pathname === '/dashboard/analytics'
+                        ? 'bg-sky-50 text-sky-600 dark:bg-sky-950/50 dark:text-sky-400'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 hover:bg-slate-50 dark:hover:bg-slate-900 dark:hover:text-white'
+                    }`}
                   >
                     Analytics
                   </Link>
@@ -178,294 +160,272 @@ export function Navbar() {
               </>
             ) : (
               <>
-                <Link
-                  href="/#features"
-                  className="text-foreground/70 hover:text-primary px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 hover:bg-primary/10"
-                >
-                  Features
-                </Link>
-                <Link
-                  href="/products"
-                  className="text-foreground/70 hover:text-primary px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 hover:bg-primary/10"
-                >
-                  Products
-                </Link>
-                <Link
-                  href="/about"
-                  className="text-foreground/70 hover:text-primary px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 hover:bg-primary/10"
-                >
-                  About
-                </Link>
-                <Link
-                  href="/help"
-                  className="text-foreground/70 hover:text-primary px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 hover:bg-primary/10"
-                >
-                  Help
-                </Link>
+                {[
+                  { href: '/', label: 'Features' },
+                  { href: '/products', label: 'Products' },
+                  { href: '/about', label: 'About' },
+                  { href: '/help', label: 'Help' },
+                ].map((link) => (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className="px-3 py-2 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 hover:bg-slate-50 dark:hover:bg-slate-900 dark:hover:text-white transition-all duration-200"
+                  >
+                    {link.label}
+                  </Link>
+                ))}
               </>
             )}
           </div>
 
-            {/* Right side actions - ultra compact on mobile */}
-            <div className="flex items-center space-x-1 sm:space-x-2">
-              {mounted && freshUser ? (
-                <>
-                  {/* Cart Icon - Prominent & Easy to See */}
-                  <div className="relative">
-                    <button
-                      onClick={() => {
-                        setIsCartOpen(!isCartOpen);
-                        setIsProfileDropdownOpen(false);
-                      }}
-                      className="relative p-2 sm:p-2.5 rounded-xl hover:bg-blue-100 active:bg-blue-200 transition-all border border-blue-300 text-blue-700 hover:text-blue-800"
-                      aria-label="Shopping Cart"
-                    >
-                      <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5" />
-                      {getCartCount() > 0 && (
-                        <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] flex items-center justify-center px-1 rounded-full bg-emerald-500 text-white text-[10px] font-bold shadow">
-                          {getCartCount()}
-                        </span>
-                      )}
-                    </button>
+          {/* Right side actions */}
+          <div className="flex items-center space-x-2">
+            {mounted && freshUser ? (
+              <>
+                {/* Cart Icon */}
+                <div className="relative">
+                  <button
+                    onClick={() => {
+                      setIsCartOpen(!isCartOpen);
+                      setIsProfileDropdownOpen(false);
+                    }}
+                    className={`relative p-2.5 rounded-xl transition-all border group ${
+                      isCartOpen 
+                        ? 'bg-sky-50 border-sky-200 text-sky-600 dark:bg-sky-950/50 dark:border-sky-900 dark:text-sky-400' 
+                        : 'border-slate-200/60 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900'
+                    }`}
+                    aria-label="Shopping Cart"
+                  >
+                    <ShoppingCart className="h-4 w-4 transition-transform group-hover:scale-105" />
+                    {getCartCount() > 0 && (
+                      <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] flex items-center justify-center px-1 rounded-full bg-emerald-500 text-white text-[10px] font-bold shadow-sm shadow-emerald-500/20 animate-pulse">
+                        {getCartCount()}
+                      </span>
+                    )}
+                  </button>
 
-                      {/* Beautiful Cart Dropdown - Blue theme */}
-                      {isCartOpen && (
-                        <div className="fixed left-1/2 -translate-x-1/2 top-[58px] sm:top-[66px]
-                          w-[calc(100vw-16px)] max-w-[330px]     /* Mobile */
-                          sm:max-w-[310px]                       /* sm */
-                          md:max-w-[295px]                       /* md */
-                          lg:max-w-[330px]                       /* lg+ */
-                          bg-white rounded-2xl shadow-2xl border border-blue-200 z-50 overflow-hidden">
-                        <div className="px-4 py-3 bg-sky-100 border-b flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <ShoppingCart className="h-4 w-4 text-blue-700" />
-                            <span className="font-semibold text-blue-900">Your Cart</span>
-                          </div>
-                          <button onClick={() => setIsCartOpen(false)} className="text-blue-500 hover:text-blue-700">
-                            <X className="h-4 w-4" />
-                          </button>
+                  {/* Cart Dropdown */}
+                  {isCartOpen && (
+                    <div className="absolute right-0 mt-2 w-[320px] bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-800 z-50 overflow-hidden transform origin-top-right transition-all">
+                      <div className="px-4 py-3 bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <ShoppingCart className="h-4 w-4 text-sky-500" />
+                          <span className="font-semibold text-slate-900 dark:text-white text-sm">Your Cart</span>
                         </div>
+                        <button onClick={() => setIsCartOpen(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
 
-                        {cartItems.length === 0 ? (
-                           <div className="p-8 text-center text-sm text-blue-700">
-                            Your cart is empty.<br />Add products from the product pages.
-                          </div>
-                        ) : (
-                          <>
-                            {/* Cart Items */}
-                            <div className="max-h-[260px] overflow-auto divide-y">
-                              {cartItems.map((item) => (
-                                <div key={item.id} className="px-4 py-3 flex gap-3">
-                                  <div className="w-14 h-14 bg-gray-100 rounded-xl overflow-hidden flex-shrink-0">
-                                    {item.image ? (
-                                      <img src={item.image} alt={item.title} className="w-full h-full object-cover" />
-                                    ) : (
-                                      <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">No image</div>
-                                    )}
-                                  </div>
+                      {cartItems.length === 0 ? (
+                        <div className="p-8 text-center text-sm text-slate-500 dark:text-slate-400">
+                          Your cart is empty.<br />
+                          <span className="text-xs text-slate-400 mt-1 block">Add products from the product pages.</span>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="max-h-[260px] overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800">
+                            {cartItems.map((item) => (
+                              <div key={item.id} className="p-4 flex gap-3 hover:bg-slate-50/50 dark:hover:bg-slate-900/50 transition-colors">
+                                <div className="w-12 h-12 bg-slate-100 dark:bg-slate-800 rounded-xl overflow-hidden flex-shrink-0 border border-slate-200/40 dark:border-slate-700/40">
+                                  {item.image ? (
+                                    <img src={item.image} alt={item.title} className="w-full h-full object-cover" />
+                                  ) : (
+                                    <div className="w-full h-full flex items-center justify-center text-slate-400 text-[10px]">No image</div>
+                                  )}
+                                </div>
 
-                                  <div className="flex-1 min-w-0">
-                                    <div className="text-sm font-semibold text-gray-900 line-clamp-1">{item.title}</div>
-                                    <div className="text-emerald-600 font-bold text-sm mt-0.5">
+                                <div className="flex-1 min-w-0 flex flex-col justify-between">
+                                  <div>
+                                    <div className="text-xs font-semibold text-slate-800 dark:text-slate-200 line-clamp-1">{item.title}</div>
+                                    <div className="text-emerald-600 dark:text-emerald-400 font-bold text-xs mt-0.5">
                                       ৳{(item.price * item.quantity).toLocaleString()}
                                     </div>
+                                  </div>
 
-                                    {/* Quantity controls inside dropdown */}
-                                    <div className="flex items-center gap-2 mt-2">
-                                      <button
-                                        onClick={() => {
-                                          const updated = updateCartQuantity(item.id, item.quantity - 1);
-                                          setCartItems(updated);
-                                        }}
-                                        className="w-6 h-6 flex items-center justify-center rounded border border-sky-300 text-sky-600 hover:bg-sky-50"
-                                      >
-                                        <Minus className="h-3 w-3" />
-                                      </button>
-                                      <span className="text-sm font-bold w-6 text-center tabular-nums">{item.quantity}</span>
-                                      <button
-                                        onClick={() => {
-                                          const updated = updateCartQuantity(item.id, item.quantity + 1);
-                                          setCartItems(updated);
-                                        }}
-                                        className="w-6 h-6 flex items-center justify-center rounded border border-sky-300 text-sky-600 hover:bg-sky-50"
-                                      >
-                                        <Plus className="h-3 w-3" />
-                                      </button>
+                                  <div className="flex items-center gap-1.5 mt-2">
+                                    <button
+                                      onClick={() => {
+                                        const updated = updateCartQuantity(item.id, item.quantity - 1);
+                                        setCartItems(updated);
+                                      }}
+                                      className="w-5 h-5 flex items-center justify-center rounded-md border border-slate-200 dark:border-slate-700 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                                    >
+                                      <Minus className="h-2.5 w-2.5" />
+                                    </button>
+                                    <span className="text-xs font-bold w-5 text-center tabular-nums text-slate-700 dark:text-slate-300">{item.quantity}</span>
+                                    <button
+                                      onClick={() => {
+                                        const updated = updateCartQuantity(item.id, item.quantity + 1);
+                                        setCartItems(updated);
+                                      }}
+                                      className="w-5 h-5 flex items-center justify-center rounded-md border border-slate-200 dark:border-slate-700 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                                    >
+                                      <Plus className="h-2.5 w-2.5" />
+                                    </button>
 
-                                      <button
-                                        onClick={() => {
-                                          const updated = removeFromCart(item.id);
-                                          setCartItems(updated);
-                                        }}
-                                        className="ml-auto text-red-500 hover:text-red-600 p-1"
-                                      >
-                                        <Trash2 className="h-4 w-4" />
-                                      </button>
-                                    </div>
+                                    <button
+                                      onClick={() => {
+                                        const updated = removeFromCart(item.id);
+                                        setCartItems(updated);
+                                      }}
+                                      className="ml-auto text-slate-400 hover:text-red-500 p-1 rounded-md hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
+                                    >
+                                      <Trash2 className="h-3.5 w-3.5" />
+                                    </button>
                                   </div>
                                 </div>
-                              ))}
+                              </div>
+                            ))}
+                          </div>
+
+                          <div className="p-4 bg-slate-50 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-800">
+                            <div className="flex justify-between items-center mb-3">
+                              <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Total Amount</span>
+                              <span className="font-bold text-base text-slate-900 dark:text-white">৳{getCartTotal().toLocaleString()}</span>
                             </div>
 
-                            {/* Footer */}
-                            <div className="p-4 bg-sky-50 border-t">
-                              <div className="flex justify-between text-sm mb-3">
-                                <span className="text-sky-600 font-medium">Total</span>
-                                <span className="font-bold text-lg text-sky-900">৳{getCartTotal().toLocaleString()}</span>
-                              </div>
+                            <div className="grid grid-cols-2 gap-2">
+                              <button
+                                onClick={() => {
+                                  setIsCartOpen(false);
+                                  router.push('/cart');
+                                }}
+                                className="py-2 text-xs font-semibold rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 transition-all shadow-sm"
+                              >
+                                View Full Cart
+                              </button>
 
-                              <div className="flex gap-2">
-                                <button
-                                  onClick={() => {
-                                    setIsCartOpen(false);
-                                    router.push('/cart');
-                                  }}
-                                   className="flex-1 py-2.5 text-sm font-semibold rounded-xl border border-blue-300 text-blue-700 hover:bg-blue-100 active:bg-white"
-                                >
-                                  View Full Cart
-                                </button>
-
-                                <button
-                                  onClick={async () => {
-                                    if (cartItems.length === 0) return;
-
-                                    try {
-                                      // Place order for every item in cart (creates Selection requests)
-                                      for (const item of cartItems) {
-                                        await fetchApi(api.selections, {
-                                          method: 'POST',
-                                          body: JSON.stringify({
-                                            itemId: item.id,
-                                            quantity: item.quantity,
-                                          }),
-                                        });
-                                      }
-
-                                      toast.success('All items placed! Check My Orders for approval status.');
-                                      clearCart();
-                                      setCartItems([]);
-                                      setIsCartOpen(false);
-                                      router.push('/dashboard/orders');
-                                    } catch (err: any) {
-                                      toast.error(err?.message || 'Failed to place some orders');
+                              <button
+                                onClick={async () => {
+                                  if (cartItems.length === 0) return;
+                                  try {
+                                    for (const item of cartItems) {
+                                      await fetchApi(api.selections, {
+                                        method: 'POST',
+                                        body: JSON.stringify({
+                                          itemId: item.id,
+                                          quantity: item.quantity,
+                                        }),
+                                      });
                                     }
-                                  }}
-                                   className="flex-1 py-2.5 text-sm font-semibold rounded-xl bg-blue-600 hover:bg-blue-700 text-white"
-                                >
-                                  Place Order
-                                </button>
-                              </div>
-                               <p className="text-[10px] text-center text-blue-500 mt-2">Placing order will create requests for manager approval</p>
+                                    toast.success('All items placed! Check My Orders for approval status.');
+                                    clearCart();
+                                    setCartItems([]);
+                                    setIsCartOpen(false);
+                                    router.push('/dashboard/orders');
+                                  } catch (err: any) {
+                                    toast.error(err?.message || 'Failed to place some orders');
+                                  }
+                                }}
+                                className="py-2 text-xs font-semibold rounded-xl bg-sky-600 hover:bg-sky-700 text-white transition-all shadow-sm shadow-sky-600/10"
+                              >
+                                Place Order
+                              </button>
                             </div>
-                          </>
-                        )}
+                            <p className="text-[10px] text-center text-slate-400 dark:text-slate-500 mt-2">Requires manager approval after placement</p>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Profile Button */}
+                <div className="relative">
+                  <button
+                    onClick={() => {
+                      setIsProfileDropdownOpen(!isProfileDropdownOpen);
+                      setIsCartOpen(false);
+                    }}
+                    className={`flex items-center gap-2 rounded-xl p-1 pr-2 sm:pr-3 transition-all border ${
+                      isProfileDropdownOpen
+                        ? 'bg-slate-50 border-slate-200 dark:bg-slate-900 dark:border-slate-800'
+                        : 'border-transparent hover:bg-slate-50 dark:hover:bg-slate-900/60'
+                    }`}
+                  >
+                    {freshUser.profileImage ? (
+                      <img
+                        key={avatarKey}
+                        src={freshUser.profileImage}
+                        alt={freshUser.name}
+                        className="h-8 w-8 rounded-lg ring-2 ring-slate-100 dark:ring-slate-800 object-cover flex-shrink-0 shadow-sm"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = 'none';
+                        }}
+                      />
+                    ) : (
+                      <div className="h-8 w-8 rounded-lg bg-sky-600 flex items-center justify-center flex-shrink-0 shadow-sm">
+                        <span className="text-white font-bold text-xs">
+                          {freshUser.name.charAt(0).toUpperCase()}
+                        </span>
                       </div>
                     )}
-                  </div>
 
-                  {/* Profile Button with Photo + Name */}
-                  <div className="relative">
-                    <button
-                      onClick={() => {
-                        setIsProfileDropdownOpen(!isProfileDropdownOpen);
-                        setIsCartOpen(false);
-                      }}
-                      className="flex items-center gap-1.5 sm:gap-2 md:gap-3 rounded-full pl-1 pr-2 sm:pl-1.5 sm:pr-4 py-1 sm:py-1.5 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-all active:scale-[0.985]"
-                    >
-                      {freshUser.profileImage ? (
-                        <img
-                          key={avatarKey}
-                          src={freshUser.profileImage}
-                          alt={freshUser.name}
-                          className="h-7 w-7 sm:h-8 sm:w-8 md:h-9 md:w-9 rounded-full ring-2 ring-blue-200 dark:ring-blue-700 object-cover flex-shrink-0"
-                          onError={(e) => {
-                            // If image fails to load, fall back to initial
-                            (e.target as HTMLImageElement).style.display = 'none';
-                          }}
-                        />
-                      ) : (
-                        <div className="h-7 w-7 sm:h-8 sm:w-8 md:h-9 md:w-9 rounded-full bg-sky-600 flex items-center justify-center ring-2 ring-sky-200 dark:ring-sky-700 flex-shrink-0">
-                          <span className="text-white font-bold text-[10px] sm:text-xs md:text-sm tracking-tight">
-                            {freshUser.name.charAt(0).toUpperCase()}
-                          </span>
-                        </div>
-                      )}
+                    <div className="hidden md:block text-left min-w-0">
+                      <p className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate max-w-[80px]">
+                        {freshUser.name.split(' ')[0]}
+                      </p>
+                      <p className="text-[10px] text-slate-400 dark:text-slate-500 truncate max-w-[80px] -mt-0.5">{freshUser.role}</p>
+                    </div>
+                  </button>
 
-                      <div className="hidden md:block text-left min-w-0">
-                         <p className="text-sm font-semibold text-foreground tracking-tight truncate max-w-[90px]">
-                           {freshUser.name.split(' ')[0]}
-                         </p>
-                         <p className="text-[10px] text-muted-foreground -mt-0.5 truncate max-w-[90px]">{freshUser.role}</p>
-                       </div>
-                    </button>
-
-                    {/* Profile Card Dropdown Box - Centered in the middle of the screen */}
-                    {isProfileDropdownOpen && (
-                   <div 
-                     className="fixed left-1/2 -translate-x-1/2 top-[58px] sm:top-[66px]
-                       w-[calc(100vw-16px)] max-w-[310px]     /* Mobile */
-                       sm:max-w-[295px]                       /* sm */
-                       md:max-w-[275px]                       /* md */
-                       lg:max-w-[290px]                       /* lg+ */
-                       bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-blue-200 dark:border-blue-800 py-2 z-[70] 
-                       transition-all duration-200 ease-out origin-top"
-                     onClick={(e) => e.stopPropagation()}
-                   >
-                       <div className="px-3 sm:px-4 py-2.5 sm:py-3 border-b bg-blue-50 dark:bg-blue-900/30">
-                        <p className="font-semibold text-[13px] sm:text-sm">{freshUser.name}</p>
-                        <p className="text-[11px] sm:text-xs text-muted-foreground truncate">{freshUser.email}</p>
-                        <div className="mt-1.5">
-                          <span className="inline-block px-2 py-0.5 text-[10px] font-medium rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">
-                            {freshUser.role}
-                          </span>
-                        </div>
+                  {/* Profile Dropdown */}
+                  {isProfileDropdownOpen && (
+                    <div className="absolute right-0 mt-2 w-[240px] bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-800 py-1.5 z-50 transform origin-top-right transition-all">
+                      <div className="px-4 py-2.5 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
+                        <p className="font-semibold text-xs text-slate-900 dark:text-white truncate">{freshUser.name}</p>
+                        <p className="text-[10px] text-slate-400 dark:text-slate-500 truncate mt-0.5">{freshUser.email}</p>
+                        <span className="inline-block px-2 py-0.5 text-[9px] font-semibold rounded-md bg-sky-50 dark:bg-sky-950 text-sky-600 dark:text-sky-400 mt-1.5 border border-sky-100 dark:border-sky-900/50">
+                          {freshUser.role}
+                        </span>
                       </div>
 
                       <div className="py-1">
-                        <Link href="/dashboard/profile" className="flex items-center gap-3 px-3 sm:px-4 py-2 sm:py-[10px] text-sm hover:bg-accent transition-colors" onClick={() => setIsProfileDropdownOpen(false)}>
-                          <User className="w-4 h-4 text-muted-foreground" /> My Profile
+                        <Link href="/dashboard/profile" className="flex items-center gap-2.5 px-4 py-2 text-xs text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors" onClick={() => setIsProfileDropdownOpen(false)}>
+                          <User className="w-3.5 h-3.5 text-slate-400" /> My Profile
                         </Link>
-                        <Link href="/dashboard" className="flex items-center gap-3 px-3 sm:px-4 py-2 sm:py-[10px] text-sm hover:bg-accent transition-colors" onClick={() => setIsProfileDropdownOpen(false)}>
-                          <Settings className="w-4 h-4 text-muted-foreground" /> Dashboard
+                        <Link href="/dashboard" className="flex items-center gap-2.5 px-4 py-2 text-xs text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors" onClick={() => setIsProfileDropdownOpen(false)}>
+                          <Settings className="w-3.5 h-3.5 text-slate-400" /> Dashboard
                         </Link>
 
                         {(freshUser.role === 'ADMIN' || freshUser.role === 'MANAGER') && (
-                          <Link href="/dashboard/analytics" className="flex items-center gap-3 px-3 sm:px-4 py-2 sm:py-[10px] text-sm hover:bg-accent transition-colors" onClick={() => setIsProfileDropdownOpen(false)}>
-                            <BarChart3 className="w-4 h-4 text-muted-foreground" /> Analytics
+                          <Link href="/dashboard/analytics" className="flex items-center gap-2.5 px-4 py-2 text-xs text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors" onClick={() => setIsProfileDropdownOpen(false)}>
+                            <BarChart3 className="w-3.5 h-3.5 text-slate-400" /> Analytics
                           </Link>
                         )}
 
                         {freshUser.role === 'ADMIN' && (
-                          <Link href="/dashboard/users" className="flex items-center gap-3 px-3 sm:px-4 py-2 sm:py-[10px] text-sm hover:bg-accent transition-colors" onClick={() => setIsProfileDropdownOpen(false)}>
-                            <Shield className="w-4 h-4 text-muted-foreground" /> Manage Users
+                          <Link href="/dashboard/users" className="flex items-center gap-2.5 px-4 py-2 text-xs text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors" onClick={() => setIsProfileDropdownOpen(false)}>
+                            <Shield className="w-3.5 h-3.5 text-slate-400" /> Manage Users
                           </Link>
                         )}
                       </div>
 
-                      <div className="border-t pt-1 mt-1">
+                      <div className="border-t border-slate-100 dark:border-slate-800 pt-1 mt-1">
                         <button
                           onClick={() => {
                             handleLogout();
                             setIsProfileDropdownOpen(false);
                           }}
-                          className="w-full flex items-center gap-3 px-3 sm:px-4 py-2 sm:py-[10px] text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-950/50 transition-colors"
+                          className="w-full flex items-center gap-2.5 px-4 py-2 text-xs text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors font-medium"
                         >
-                          <LogOut className="w-4 h-4" /> Logout
+                          <LogOut className="w-3.5 h-3.5" /> Logout
                         </button>
                       </div>
-                  </div>
-                )}
-              </div>
-            </>
+                    </div>
+                  )}
+                </div>
+              </>
             ) : (
-              <div className="hidden sm:flex items-center space-x-2">
+              <div className="hidden sm:flex items-center space-x-1.5">
                 <Link href="/login">
-                  <Button variant="ghost" size="sm">
+                  <Button variant="ghost" size="sm" className="rounded-xl text-xs font-medium">
                     Login
                   </Button>
                 </Link>
                 <Link href="/register">
-                  <Button size="sm">
+                  <Button size="sm" className="rounded-xl text-xs font-medium bg-sky-600 hover:bg-sky-700 shadow-sm shadow-sky-600/10">
                     Get Started
                   </Button>
                 </Link>
@@ -478,9 +438,9 @@ export function Navbar() {
                 variant="ghost"
                 size="sm"
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                className="p-1.5"
+                className="p-2 rounded-xl border border-slate-200/60 dark:border-slate-800"
               >
-                <Menu className="h-4 w-4 sm:h-5 sm:w-5" />
+                <Menu className="h-4 w-4" />
               </Button>
             </div>
           </div>
@@ -489,108 +449,67 @@ export function Navbar() {
 
       {/* Mobile menu */}
       {isMobileMenuOpen && (
-        <div className="md:hidden border-t bg-background">
-          <div className="px-2 pt-2 pb-3 space-y-1">
-            {isAuthenticated ? (
-              <>
+        <div className="md:hidden border-t border-slate-100 dark:border-slate-900 bg-white dark:bg-slate-950 px-4 py-3 space-y-1">
+          {isAuthenticated ? (
+            <>
+              {[
+                { href: '/', label: 'Home' },
+                { href: '/recommendations', label: 'Recommendations' },
+                { href: '/about', label: 'About' },
+                { href: '/help', label: 'Help' },
+                { href: '/ai', label: 'AI Assistant' },
+                { href: '/dashboard/analytics', label: 'Analytics' },
+              ].map((link) => (
                 <Link
-                  href="/"
-                  className="block px-3 py-2 text-base font-medium text-foreground/70 hover:text-primary"
+                  key={link.href}
+                  href={link.href}
+                  className="block px-3 py-2.5 text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 hover:bg-slate-50 dark:hover:bg-slate-900 rounded-xl transition-all"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
-                  Home
+                  {link.label}
                 </Link>
+              ))}
+              {(freshUser?.role === 'ADMIN' || freshUser?.role === 'MANAGER') && (
                 <Link
-                  href="/recommendations"
-                  className="block px-3 py-2 text-base font-medium text-foreground/70 hover:text-primary"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  Recommendations
-                </Link>
-                {(freshUser?.role === 'ADMIN' || freshUser?.role === 'MANAGER') && (
-                  <Link
-                    href="/dashboard/items"
-                    className="block px-3 py-2 text-base font-medium text-foreground/70 hover:text-primary"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    Products
-                  </Link>
-                )}
-                <Link
-                  href="/about"
-                  className="block px-3 py-2 text-base font-medium text-foreground/70 hover:text-primary"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  About
-                </Link>
-                <Link
-                  href="/help"
-                  className="block px-3 py-2 text-base font-medium text-foreground/70 hover:text-primary"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  Help
-                </Link>
-                <Link
-                  href="/ai"
-                  className="block px-3 py-2 text-base font-medium text-foreground/70 hover:text-primary"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  AI Assistant
-                </Link>
-
-                <Link
-                  href="/dashboard/analytics"
-                  className="block px-3 py-2 text-base font-medium text-foreground/70 hover:text-primary"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  Analytics
-                </Link>
-              </>
-            ) : (
-              <>
-                <Link
-                  href="/#features"
-                  className="block px-3 py-2 text-base font-medium text-foreground/70 hover:text-primary"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  Features
-                </Link>
-                <Link
-                  href="/products"
-                  className="block px-3 py-2 text-base font-medium text-foreground/70 hover:text-primary"
+                  href="/dashboard/items"
+                  className="block px-3 py-2.5 text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 hover:bg-slate-50 dark:hover:bg-slate-900 rounded-xl transition-all"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   Products
                 </Link>
+              )}
+            </>
+          ) : (
+            <>
+              {[
+                { href: '/#features', label: 'Features' },
+                { href: '/products', label: 'Products' },
+                { href: '/about', label: 'About' },
+                { href: '/help', label: 'Help' },
+              ].map((link) => (
                 <Link
-                  href="/about"
-                  className="block px-3 py-2 text-base font-medium text-foreground/70 hover:text-primary"
+                  key={link.href}
+                  href={link.href}
+                  className="block px-3 py-2.5 text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 hover:bg-slate-50 dark:hover:bg-slate-900 rounded-xl transition-all"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
-                  About
+                  {link.label}
                 </Link>
-                <Link
-                  href="/help"
-                  className="block px-3 py-2 text-base font-medium text-foreground/70 hover:text-primary"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  Help
+              ))}
+              <div className="pt-2 grid grid-cols-2 gap-2 px-2">
+                <Link href="/login" onClick={() => setIsMobileMenuOpen(false)}>
+                  <Button variant="ghost" size="sm" className="w-full rounded-xl text-xs">
+                    Login
+                  </Button>
                 </Link>
-                <div className="px-3 py-2 space-x-2">
-                  <Link href="/login">
-                    <Button variant="ghost" size="sm">
-                      Login
-                    </Button>
-                  </Link>
-                  <Link href="/register">
-                    <Button size="sm">
-                      Get Started
-                    </Button>
-                  </Link>
-                </div>
-              </>
-            )}
-          </div>
+                <Link href="/register" onClick={() => setIsMobileMenuOpen(false)}>
+                  <Button size="sm" className="w-full rounded-xl text-xs bg-sky-600 hover:bg-sky-700">
+                    Get Started
+                  </Button>
+                </Link>
+              </div>
+            </>
+          )}
         </div>
       )}
     </nav>

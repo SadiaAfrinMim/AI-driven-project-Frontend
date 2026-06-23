@@ -471,7 +471,7 @@ export default function ProfilePage() {
                 'border-amber-200';
 
               return (
-                <Card key={sel.id} className={`group flex flex-col h-full rounded-2xl overflow-hidden hover:shadow-lg transition-all bg-white border ${borderColor}`}>
+                <Card key={sel.id} py-0 className={`group flex flex-col h-full rounded-2xl overflow-hidden hover:shadow-lg transition-all bg-white border ${borderColor}`}>
                   {/* Image */}
                   <div className="relative aspect-square bg-slate-100 flex-shrink-0 overflow-hidden">
                     {item.images?.[0] ? (

@@ -9,7 +9,7 @@ const PUBLIC_ROUTES = [
   '/about',
   '/help',
   '/products',
-  '/recommendations',
+
 ];
 
 // ==================== ALL LOGGED-IN USERS (USER, MANAGER, ADMIN) ====================
@@ -17,6 +17,7 @@ const ALL_USERS_ROUTES = [
   '/dashboard',
   '/dashboard/profile',
   '/dashboard/reviews',
+    '/recommendations',
   '/ai',
 ];
 
@@ -32,11 +33,13 @@ const ADMIN_ONLY_ROUTES = [
   '/dashboard/users',
 ];
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const token = request.cookies.get('accessToken')?.value;
   const role = (request.cookies.get('role')?.value || '').toUpperCase();
-
+console.log("Proxy middleware triggered for path:", pathname);
+console.log("Access token:", token);
+console.log("User role:", role);
   // 1. Allow all public routes
   const isPublic = PUBLIC_ROUTES.some(
     (route) => pathname === route || pathname.startsWith(route + '/')
@@ -48,6 +51,12 @@ export function middleware(request: NextRequest) {
   // 2. If no token → redirect to login for any protected route
   if (!token) {
     return NextResponse.redirect(new URL('/login', request.url));
+  }
+
+ if (!token && request.nextUrl.pathname.startsWith('/products/:id')) {
+  console.log('Unauthenticated access to product details, redirecting to login');
+    return NextResponse.redirect(new URL('/login', request.url));
+
   }
 
   // 3. Routes allowed for ALL logged-in users
@@ -62,6 +71,7 @@ export function middleware(request: NextRequest) {
   const isManagerAdminRoute = MANAGER_ADMIN_ROUTES.some(
     (route) => pathname === route || pathname.startsWith(route + '/')
   );
+  
   if (isManagerAdminRoute) {
     if (['ADMIN', 'MANAGER'].includes(role)) {
       return NextResponse.next();

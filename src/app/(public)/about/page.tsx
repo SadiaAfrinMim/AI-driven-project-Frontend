@@ -103,16 +103,21 @@ export default function AboutPage() {
                 <Badge variant="secondary">Privacy-First</Badge>
               </div>
             </div>
-            <div className="relative">
-              <div className="bg-sky-100 dark:bg-sky-900 rounded-2xl p-8">
-                <Bot className="h-16 w-16 text-primary mx-auto mb-4" />
-                <h3 className="text-xl font-semibold text-center mb-2">AI-Powered Intelligence</h3>
-                <p className="text-muted-foreground text-center">
-                  Advanced machine learning algorithms analyze user behavior, preferences, and market trends.
-                </p>
-              </div>
-            </div>
-          </div>
+      <div className="relative overflow-hidden rounded-2xl border border-gray-200/50 dark:border-sky-950 bg-neutral-950 shadow-lg group aspect-[4/3] w-full">
+  
+  {/* Pure Video Layer */}
+  <video 
+    src="/8937985-hd_1080_1920_30fps.mp4" 
+    autoPlay 
+    loop 
+    muted 
+    playsInline 
+    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
+  />
+
+  {/* Subtle Border Glow Effect on Hover (Optional but looks premium) */}
+  <div className="absolute inset-0 border border-transparent group-hover:border-sky-500/30 rounded-2xl pointer-events-none transition-colors duration-300" />
+</div>  </div>
         </div>
       </section>
 

@@ -22,6 +22,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { fetchApi, api } from '@/lib/api';
+import Image from 'next/image';
 
 interface Product {
   id: string;
@@ -148,7 +149,7 @@ const clearFilters = () => {
     const stockQty = product.quantity ?? 0;
 
     return (
-      <Card className="group flex flex-col h-full overflow-hidden border border-gray-200 hover:border-sky-300 hover:shadow-xl transition-all bg-white rounded-2xl">
+      <Card className="group py-0 flex flex-col h-full overflow-hidden border border-gray-200 hover:border-sky-300 hover:shadow-xl transition-all bg-white rounded-2xl">
         {/* Image */}
         <div className="relative h-48 bg-gray-100 flex-shrink-0 overflow-hidden">
           {product.images?.[0] ? (
@@ -238,14 +239,22 @@ const clearFilters = () => {
           </div>
 
           {/* Action */}
-          <Link href={`/products/${product.id}`} className="mt-1">
-            <Button 
-              size="sm" 
-              className="w-full h-9 text-sm bg-sky-600 hover:bg-sky-700 transition-colors"
-            >
-              View Details
-            </Button>
-          </Link>
+       {/* Action */}
+<Link 
+  href={
+    typeof window !== 'undefined' && document.cookie.includes('accessToken')
+      ? `/products/${product.id}`
+      : `/login?callbackUrl=/products/${product.id}`
+  } 
+  className="mt-1"
+>
+  <Button 
+    size="sm" 
+    className="w-full h-9 text-sm bg-sky-600 hover:bg-sky-700 transition-colors"
+  >
+    View Details
+  </Button>
+</Link>
         </CardContent>
       </Card>
     );
@@ -257,9 +266,14 @@ const clearFilters = () => {
         <div className="flex gap-4">
            <div className="w-24 h-24 bg-sky-100 dark:bg-sky-900 rounded-lg flex items-center justify-center flex-shrink-0">
             {product.images?.[0] ? (
-              <img
+              <Image
                 src={product.images[0]}
                 alt={product.title}
+                height={96}
+                width={96}
+                quality={75}
+                priority
+                placeholder="blur"
                 className="w-full h-full object-cover rounded-lg"
               />
             ) : (

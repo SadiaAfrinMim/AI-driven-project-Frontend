@@ -147,7 +147,7 @@ export default function PublicRecommendationsPage() {
           {paginatedRecommendations.map((item) => (
             <Card
               key={item.itemId}
-              className="group flex flex-col h-full overflow-hidden border border-gray-200 hover:border-sky-300 hover:shadow-xl transition-all bg-white rounded-2xl"
+              className="group py-0 flex flex-col h-full overflow-hidden border border-gray-200 hover:border-sky-300 hover:shadow-xl transition-all bg-white rounded-2xl"
             >
               <div className="relative h-48 bg-gray-100 flex-shrink-0 overflow-hidden">
                 {item.image ? (

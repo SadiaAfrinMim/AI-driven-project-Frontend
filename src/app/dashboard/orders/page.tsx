@@ -133,9 +133,9 @@ export default function MyOrdersPage() {
             const total = item ? (item.price * order.quantity) : 0;
 
             return (
-              <Card key={order.id} className="overflow-hidden border border-gray-200 hover:shadow-lg transition-all bg-white rounded-2xl flex flex-col">
+              <Card key={order.id} className="overflow-hidden py-0 border border-gray-200 hover:shadow-lg transition-all bg-white rounded-2xl flex flex-col">
                 {/* Image */}
-                <div className="relative h-44 bg-gray-100">
+                <div className="relative  h-44 bg-gray-100">
                   {item?.images?.[0] ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img

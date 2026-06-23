@@ -9,13 +9,19 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { loginSchema, type LoginFormData } from '@/lib/validations';
 import { api, fetchApi } from '@/lib/api';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import Cookies from 'js-cookie';
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+
+  const searchParams = useSearchParams();
+  
+  // ইউআরএল থেকে callbackUrl-টি রিড করবে, যদি না থাকে তবে ডিফল্ট হিসেবে '/dashboard'-এ পাঠাবে
+  const callbackUrl = searchParams.get('callbackUrl') || '/dashboard';
+
 
   const {
     register,

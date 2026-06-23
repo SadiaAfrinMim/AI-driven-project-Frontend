@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { motion } from 'framer-motion';
 
 import {
   ArrowRight,
@@ -23,6 +24,9 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { api, fetchApi } from '@/lib/api';
+import { cn } from '@/lib/utils';
+import Image from 'next/image';
+
 
 type Suggestion = {
   itemId: string;
@@ -317,158 +321,146 @@ export default function LandingPage() {
       loadCategoryQuickPicks(category);
     }
   }, [category]);
+  const fadeInUp = {
+    hidden: { opacity: 0, y: 24 },
+    visible: { 
+      opacity: 1, 
+      y: 0,
+      transition: { duration: 0.6, ease: [0.215, 0.610, 0.355, 1.000] }
+    }
+  };
+
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: { staggerChildren: 0.12 } // একটির পর আরেকটি এলিমেন্ট আসবে
+    }
+  };
 
   return (
     <div className="min-h-screen overflow-hidden bg-sky-50">
-      <section className="relative border-b border-border/60">
-        <div className="absolute inset-0 opacity-50 bg-sky-100/30" />
-        <div className="relative mx-auto grid max-w-7xl gap-10 px-4 py-16 sm:px-6 lg:grid-cols-[1.1fr_0.9fr] lg:px-8 lg:py-24">
-          <div className="space-y-8">
-            <Badge className="rounded-full bg-primary/10 px-4 py-2 text-primary shadow-sm">
-              <Sparkles className="mr-2 h-4 w-4" />
-              AI concierge for product discovery
-            </Badge>
+ <section className="relative overflow-hidden border-b border-gray-100 bg-gradient-to-b from-neutral-50/50 to-white py-20 lg:py-32">
+      {/* Fine Background Grid */}
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808008_1px,transparent_1px),linear-gradient(to_bottom,#80808008_1px,transparent_1px)] bg-[size:16px_16px] [mask-image:radial-gradient(ellipse_50%_50%_at_50%_20%,#000_80%,transparent_100%)]" />
 
-            <div className="space-y-5">
-              <h1 className="max-w-3xl text-5xl font-black tracking-tight text-foreground sm:text-6xl lg:text-7xl">
-                Find products that actually fit your life.
-              </h1>
-              <p className="max-w-2xl text-lg leading-8 text-muted-foreground sm:text-xl">
-                Search less, choose better. Describe what you want, set a budget, and let the AI sort through products, reviews, and relevance for you.
-              </p>
-            </div>
+      <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+        
+        {/* Left Side: Content Area (Staggered Animation) */}
+        <motion.div 
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          className="space-y-8"
+        >
+          {/* Clean Capsule Pill */}
+          <motion.div variants={fadeInUp} className="inline-flex items-center gap-2 rounded-full bg-white px-3.5 py-1.5 text-xs font-bold text-neutral-800 shadow-sm border border-neutral-200/60">
+            <span className="flex h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            AI Engine Active
+          </motion.div>
 
-            <div className="flex flex-wrap gap-3">
-              <Link href="/register">
-                <Button size="lg" className="h-12 rounded-full px-7 text-base shadow-lg shadow-primary/20">
-                  Start Free
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </Link>
-              <Link href="/products">
-                <Button size="lg" variant="outline" className="h-12 rounded-full px-7 text-base bg-white/70">
-                  Explore Marketplace
-                </Button>
-              </Link>
-            </div>
+          {/* Bold Typography */}
+          <motion.div variants={fadeInUp} className="space-y-5">
+            <h1 className="text-4xl font-extrabold tracking-tight text-neutral-900 sm:text-5xl lg:text-6xl leading-[1.1]">
+              Find products that <span className="text-sky-600 font-black">actually fit</span> your life.
+            </h1>
+            <p className="max-w-xl text-base leading-relaxed text-neutral-600 sm:text-lg">
+              Search less, choose better. Describe what you want, set a budget, and let the AI sort through products, reviews, and relevance for you.
+            </p>
+          </motion.div>
 
-            <div className="grid gap-4 sm:grid-cols-3">
-              {[
-                { icon: WandSparkles, title: 'Instant matching', text: 'Turns a simple prompt into ranked suggestions.' },
-                { icon: ShieldCheck, title: 'Review-aware', text: 'Balances price, fit, freshness, and buyer feedback.' },
-                { icon: HeartHandshake, title: 'Made to trust', text: 'Clear reasons for every recommendation you see.' },
-              ].map((item) => (
-                <Card key={item.title} className="border-white/70 bg-white/70 shadow-sm backdrop-blur">
-                  <CardContent className="p-5">
-                    <item.icon className="mb-4 h-6 w-6 text-primary" />
-                    <h3 className="mb-2 font-semibold">{item.title}</h3>
-                    <p className="text-sm leading-6 text-muted-foreground">{item.text}</p>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+          {/* Sleek Squared-Rounded Buttons */}
+          <motion.div variants={fadeInUp} className="flex flex-wrap items-center gap-3 pt-2">
+            <Link href="/register">
+              <Button size="lg" className="h-11 rounded-xl px-7 bg-neutral-900 text-white hover:bg-neutral-800 shadow-md shadow-neutral-950/10 text-sm font-semibold tracking-wide transition-transform active:scale-98">
+                Start Free
+              </Button>
+            </Link>
+            <Link href="/products">
+              <Button size="lg" variant="ghost" className="h-11 rounded-xl px-7 text-neutral-600 hover:bg-neutral-100 border border-transparent hover:border-neutral-200/50 text-sm font-medium">
+                Explore Marketplace
+                <ArrowRight className="ml-2 h-4 w-4 text-neutral-400" />
+              </Button>
+            </Link>
+          </motion.div>
+        </motion.div>
+
+        {/* Right Side: Media Compartment (Scale & Fade-in Animation) */}
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.95, y: 15 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
+          className="relative w-full aspect-video lg:aspect-[4/3] rounded-2xl border border-gray-200/80 bg-white p-2 shadow-2xl shadow-neutral-200/80 group"
+        >
+          {/* Background Glowing Effect */}
+          <div className="absolute inset-0 -z-10 rounded-2xl bg-gradient-to-tr from-sky-400/20 to-purple-400/10 blur-xl opacity-70 group-hover:opacity-100 transition-opacity duration-500" />
+          
+          <div className="relative w-full h-full rounded-xl overflow-hidden bg-neutral-50 border border-gray-100">
+            <video 
+              src="/watermarked_preview.mp4" 
+              autoPlay 
+              loop 
+              muted 
+              playsInline 
+              className="w-full h-full object-cover"
+            />
           </div>
+        </motion.div>
 
-          <Card className="border-white/80 bg-white/85 shadow-2xl shadow-black/5 backdrop-blur-xl">
-            <CardContent className="p-6 sm:p-7">
-              <div className="mb-6 flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary/80">AI Concierge</p>
-                  <h2 className="mt-2 text-2xl font-bold">Build my recommendations</h2>
-                </div>
-                <div className="rounded-2xl bg-secondary/20 p-3 text-secondary">
-                  <Bot className="h-6 w-6" />
-                </div>
-              </div>
+      </div>
+    </section>
 
-              <div className="space-y-4">
-                <Input
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
-                  placeholder="What are you looking for?"
-                  className="h-12 rounded-2xl bg-white"
-                />
+{/* New Section - Feature Cards moved here */}
+<section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+  <div className="mb-10 text-center">
+    <Badge className="mb-4 rounded-full bg-primary/10 px-4 py-2 text-primary">
+      <Sparkles className="mr-2 h-4 w-4" />
+      Why Choose Us
+    </Badge>
+    <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
+      Smarter product discovery, powered by AI
+    </h2>
+    <p className="mt-3 text-muted-foreground">
+      Three simple reasons why our AI concierge helps you find better products
+    </p>
+  </div>
 
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <Input
-                    value={budget}
-                    onChange={(event) => setBudget(event.target.value)}
-                    placeholder="Budget in USD"
-                    type="number"
-                    className="h-12 rounded-2xl bg-white"
-                  />
-                  <Input
-                    value={vibe}
-                    onChange={(event) => setVibe(event.target.value)}
-                    placeholder="Vibe: minimal, cozy, premium"
-                    className="h-12 rounded-2xl bg-white"
-                  />
-                </div>
-
-                <Select value={category} onValueChange={(value) => setCategory(value || 'Electronics')}>
-                  <SelectTrigger className="h-12 w-full rounded-2xl bg-white px-4">
-                    <SelectValue placeholder="Choose category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map((item) => (
-                      <SelectItem key={item} value={item}>
-                        {item}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                 <Button 
-                   onClick={() => void runConcierge()} 
-                   disabled={loading || (!query.trim() && !category)} 
-                   className="h-12 w-full rounded-2xl text-base blur-0"
-                 >
-                   {loading ? 'Thinking...' : 'Generate Suggestions'}
-                 </Button>
-              </div>
-
-              {/* AI Recommendations only appear after user clicks Generate with a query */}
-              {suggestions.length > 0 && (
-                <div className="mt-6 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-semibold text-foreground">Suggested for you</p>
-                    <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
-                      {suggestions.length} results
-                    </p>
-                  </div>
-
-                  <div className="space-y-3">
-                    {suggestions.slice(0, 3).map((item) => (
-                      <div key={item.itemId} className="rounded-2xl border border-border/70 bg-background/70 p-4">
-                        <div className="mb-2 flex items-start justify-between gap-4">
-                          <div>
-                            <p className="font-semibold">{item.title}</p>
-                            <p className="mt-1 text-sm text-muted-foreground">{item.reason}</p>
-                          </div>
-                          <Badge variant="outline" className="rounded-full">
-                            {item.score}%
-                          </Badge>
-                        </div>
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="font-semibold text-primary">${item.price.toFixed(2)}</span>
-                          <span className="text-muted-foreground">{item.category}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Placeholder message when no suggestions yet */}
-              {!loading && suggestions.length === 0 && (
-                <div className="mt-6 rounded-2xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-                  Select a category (or type a description) and click <span className="font-medium">"Generate Suggestions"</span> to get AI recommendations.
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      </section>
+  <div className="grid gap-6 sm:grid-cols-3">
+    {[
+      { 
+        icon: WandSparkles, 
+        title: 'Instant matching', 
+        text: 'Turns a simple prompt into ranked suggestions.',
+        color: 'from-purple-500 to-pink-400'
+      },
+      { 
+        icon: ShieldCheck, 
+        title: 'Review-aware', 
+        text: 'Balances price, fit, freshness, and buyer feedback.',
+        color: 'from-blue-500 to-cyan-400'
+      },
+      { 
+        icon: HeartHandshake, 
+        title: 'Made to trust', 
+        text: 'Clear reasons for every recommendation you see.',
+        color: 'from-green-500 to-emerald-400'
+      },
+    ].map((item) => (
+      <Card key={item.title} className="border-border/50 bg-white/80 shadow-sm transition-all hover:shadow-lg hover:shadow-primary/5">
+        <CardContent className="p-6 text-center">
+          <div className={cn(
+            "mx-auto mb-4 inline-flex rounded-2xl bg-gradient-to-br p-3 text-white",
+            item.color
+          )}>
+            <item.icon className="h-6 w-6" />
+          </div>
+          <h3 className="mb-2 text-lg font-semibold">{item.title}</h3>
+          <p className="text-sm leading-6 text-muted-foreground">{item.text}</p>
+        </CardContent>
+      </Card>
+    ))}
+  </div>
+</section>
 
    
 
@@ -501,55 +493,72 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-4 pb-16 sm:px-6 lg:px-8">
-        <div className="mb-8 flex items-end justify-between gap-4">
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary/80">Live catalog</p>
-            <h2 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">Featured marketplace picks</h2>
-          </div>
-          <Badge variant="outline" className="rounded-full bg-white/70 px-4 py-2">
-            Approved products only
-          </Badge>
+     <section className="mx-auto max-w-7xl px-4 pb-16 sm:px-6 lg:px-8">
+  <div className="mb-8 flex items-end justify-between gap-4">
+    <div>
+      <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary/80">Live catalog</p>
+      <h2 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">Featured marketplace picks</h2>
+    </div>
+    <Badge variant="outline" className="rounded-full bg-white/70 px-4 py-2">
+      Approved products only
+    </Badge>
+  </div>
+
+ <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+  {featuredProducts.map((product) => (
+    /* 🎯 এখানে পরিবর্তন করা হয়েছে: টোকেন না থাকলে সরাসরি লগইন পেজে পাঠাবে */
+    <Link 
+      key={product.id} 
+      href={
+        typeof window !== 'undefined' && document.cookie.includes('accessToken')
+          ? `/products/${product.id}`
+          : `/login?callbackUrl=/products/${product.id}`
+      }
+    >
+      <Card className="h-full py-0 overflow-hidden border-white/70 bg-white/75 shadow-sm transition-transform duration-300 hover:-translate-y-1 hover:shadow-xl">
+        
+        {/* FIX: Absolute positioning inside a relative aspect-ratio box ensures uniform sizes */}
+        <div className="relative w-full aspect-[4/3] overflow-hidden bg-muted">
+          {product.images?.[0] ? (
+            <Image
+              src={product.images[0]} 
+              alt={product.title} 
+              height={300}
+              width={400}
+              className="absolute inset-0 h-full w-full object-cover" 
+            />
+          ) : (
+            <div className="absolute inset-0 flex h-full w-full items-center justify-center bg-sky-100">
+              <Package className="h-10 w-10 text-primary/70" />
+            </div>
+          )}
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-          {featuredProducts.map((product) => (
-            <Link key={product.id} href={`/products/${product.id}`}>
-              <Card className="h-full overflow-hidden border-white/70 bg-white/75 shadow-sm transition-transform duration-300 hover:-translate-y-1 hover:shadow-xl">
-                <div className="aspect-[4/3] bg-muted">
-                  {product.images?.[0] ? (
-                    <img src={product.images[0]} alt={product.title} className="h-full w-full object-cover" />
-                  ) : (
-                    <div className="flex h-full items-center justify-center bg-sky-100">
-                      <Package className="h-10 w-10 text-primary/70" />
-                    </div>
-                  )}
-                </div>
-                <CardContent className="space-y-3 p-5">
-                  <div className="flex items-center justify-between gap-3">
-                    <Badge variant="secondary" className="rounded-full">{product.category}</Badge>
-                    <div className="flex items-center text-sm text-muted-foreground">
-                      <Star className="mr-1 h-4 w-4 fill-current text-primary" />
-                      {Number(product.rating || 0).toFixed(1)}
-                    </div>
-                  </div>
-                  <div>
-                    <h3 className="line-clamp-2 text-lg font-semibold">{product.title}</h3>
-                    <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">{product.description}</p>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xl font-bold text-primary">${Number(product.price).toFixed(2)}</span>
-                    <div className="flex items-center text-sm text-muted-foreground">
-                      <MapPin className="mr-1 h-4 w-4" />
-                      {product.location}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
-        </div>
-      </section>
+        <CardContent className="space-y-3 p-5">
+          <div className="flex items-center justify-between gap-3">
+            <Badge variant="secondary" className="rounded-full">{product.category}</Badge>
+            <div className="flex items-center text-sm text-muted-foreground">
+              <Star className="mr-1 h-4 w-4 fill-current text-primary" />
+              {Number(product.rating || 0).toFixed(1)}
+            </div>
+          </div>
+          <div>
+            <h3 className="line-clamp-2 text-lg font-semibold">{product.title}</h3>
+            <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">{product.description}</p>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-xl font-bold text-primary">${Number(product.price).toFixed(2)}</span>
+            <div className="flex items-center text-sm text-muted-foreground">
+              <MapPin className="mr-1 h-4 w-4" />
+              {product.location}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </Link>
+  ))}
+</div>
+</section>
     </div>
   );
 }
